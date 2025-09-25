@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CBT （30問）</title>
+  <style>
+    :root{--bg:#0b1020;--panel:#121a33;--accent:#6aa1ff;--text:#e9eefc;--muted:#a8b3d6;--danger:#ff6a7a;--good:#5ad39d}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(160deg,#0b1020,#101830 55%,#0b1020);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    .container{max-width:840px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .brand{font-weight:700;letter-spacing:.3px}
+    .panel{background:var(--panel);border:1px solid rgba(255,255,255,.05);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:20px}
+    .muted{color:var(--muted)}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:12px}
+    .progress{height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#b782ff);width:0}
+    .question-card{display:grid;gap:16px}
+    fieldset{border:0;margin:0;padding:0}
+    legend{font-weight:700;font-size:20px;margin-bottom:8px}
+    .opts{display:grid;gap:10px}
+    .opt{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;cursor:pointer;background:rgba(255,255,255,.02)}
+    .opt input{accent-color:var(--accent)}
+    .opt.correct{outline:2px solid var(--good);background:rgba(90,211,157,.08)}
+    .opt.wrong{outline:2px solid var(--danger);background:rgba(255,106,122,.08)}
+    .nav{display:flex;gap:10px;justify-content:space-between;margin-top:6px}
+    button{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:#081225;box-shadow:0 6px 18px rgba(106,161,255,.35)}
+    button.secondary{background:rgba(255,255,255,.08);color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,.12)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .timer{font-variant-numeric:tabular-nums}
+    .kbd{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:1px 6px;border-radius:6px;font-size:12px}
+    .footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .result{display:grid;gap:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:14px;border-radius:14px}
+    .explain{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:12px;margin-top:8px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    a.link{color:#a2c4ff}
+    /* === 入力文字の視認性を改善 === */
+    input.opt{display:block;width:100%;color:var(--text);background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);padding:12px 14px;border-radius:12px;font-size:16px;line-height:1.4;caret-color:var(--accent);cursor:text}
+    input.opt::placeholder{color:var(--muted);opacity:.95}
+    input.opt:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(106,161,255,.28);background:rgba(255,255,255,.14)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">CBT 一問一答</div>
+      <div class="chip"><span aria-hidden>🕒</span><span class="timer" id="timer" aria-live="polite">--:--</span></div>
+    </header>
+
+    <div class="panel" aria-live="polite">
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+      <div class="muted" id="meta" style="margin:10px 0 16px"></div>
+      <div id="screen"></div>
+    </div>
+
+    <div class="footer" style="margin-top:12px">
+      <div class="muted">ショートカット: <span class="kbd">1-9</span> 選択 / <span class="kbd">Enter</span> 次へ</div>
+      <div class="muted">進捗は自動保存されます。</div>
+    </div>
+  </div>
+
+<script>
+/********************
+ * 設定
+ ********************/
+const CONFIG = {
+  title: 'ネットワーク＆情報セキュリティ 基礎30問',
+  timeLimitMinutes: 50,
+  shuffleQuestions: true,
+  shuffleOptions: true,
+  allowReviewBeforeSubmit: true,
+  showExplanationAfterSubmit: true,
+  persistKey: 'cbt-state-v1-30'
+};
+
+/********************
+ * 問題データ（30問に再編）
+ * type: 'single'（単一選択）/ 'short'（短答入力）
+ ********************/
+const QUESTIONS = [
+  // --- ネットワーク基礎（15問） ---
+  {id:'q1', type:'short', stem:'学校や会社などの限られた範囲のネットワークを何と呼びますか？', answerPattern:/^(LAN|ローカルエリアネットワーク|Local Area Network|ＬＡＮ)$/i, explanation:'限定された範囲のネットワークはLANです。', tags:['ネットワーク基礎'], difficulty:1},
+  {id:'q2', type:'short', stem:'LANどうしを広い範囲で結んだネットワークを何と呼びますか？', answerPattern:/^(WAN|ワイドエリアネットワーク|Wide Area Network|ＷＡＮ)$/i, explanation:'広域を結ぶネットワークはWANです。', tags:['ネットワーク基礎'], difficulty:1},
+  {id:'q3', type:'short', stem:'世界中のLANやWANが接続され、世界規模に発展したネットワークを何と呼びますか？', answerPattern:/^(インターネット|Internet)$/i, explanation:'世界規模のネットワークはインターネットです。', tags:['ネットワーク基礎'], difficulty:1},
+  {id:'q4', type:'short', stem:'サービスを要求するクライアントと、サービスを提供するサーバからなるシステムを何と呼びますか？', answerPattern:/^(クライアント[-／/−]?サーバ(?:システム)?|Client(?:-| )?Server(?: System)?)$/i, explanation:'クライアントサーバシステムです。', tags:['ネットワーク基礎'], difficulty:1},
+  {id:'q5', type:'short', stem:'情報伝達における約束ごとを何と呼びますか？', answerPattern:/^(プロトコル|通信規約|protocol)$/i, explanation:'通信の取り決めはプロトコルです。', tags:['ネットワーク基礎','プロトコル'], difficulty:1},
+  {id:'q6', type:'short', stem:'インターネットで用いられるプロトコル群で、TCPとIPの2つのプロトコルを中心とするものを何と呼びますか？', answerPattern:/^TCP[/]IP$/i, explanation:'TCP/IPです。', tags:['ネットワーク基礎','プロトコル'], difficulty:1},
+  {id:'q7', type:'short', stem:'TCP/IPにおいて、データの正確性を保証する役割を持つプロトコルは何ですか？', answerPattern:/^TCP$/i, explanation:'信頼性と再送制御などを担うのはTCPです。', tags:['TCP/IP'], difficulty:1},
+  {id:'q8', type:'short', stem:'TCP/IPにおいて、IPアドレスを用いてパケットをやり取りする役割を持つプロトコルは何ですか？', answerPattern:/^IP$/i, explanation:'経路制御の単位となるパケットを扱うのはIPです。', tags:['TCP/IP'], difficulty:1},
+  {id:'q9', type:'short', stem:'インターネット上のコンピュータが持っている個別の番号を何と呼びますか？', answerPattern:/^(IPアドレス|IP address)$/i, explanation:'個体識別のための番号はIPアドレスです。', tags:['TCP/IP','IP'], difficulty:1},
+  {id:'q10', type:'short', stem:'IPアドレスを32ビットで構成し、8ビットずつドットで区切って表現するバージョンを何と呼びますか？', answerPattern:/^IPv?4$/i, explanation:'32ビットのIPはIPv4です。', tags:['TCP/IP','IP'], difficulty:1},
+  {id:'q13', type:'short', stem:'IPアドレスを人間にとって分かりやすい名前に付け替えたものを何と呼びますか？', answerPattern:/^(ドメイン名|domain name)$/i, explanation:'人が扱いやすい名前はドメイン名です。', tags:['DNS'], difficulty:1},
+  {id:'q14', type:'short', stem:'ドメイン名とIPアドレスを相互に変換するサーバを何と呼びますか？', answerPattern:/^(DNSサーバ|DNS サーバ|ネームサーバ|name server|DNS server)$/i, explanation:'DNSサーバ（ネームサーバ）が変換を行います。', tags:['DNS'], difficulty:1},
+  {id:'q15', type:'short', stem:'パケット転送用の通信経路の中から、最適な経路を選択する仕組みを何と呼びますか？', answerPattern:/^(ルーティング|routing)$/i, explanation:'経路選択はルーティングです。', tags:['ルーティング'], difficulty:1},
+  {id:'q16', type:'short', stem:'ルータ内にあり、パケットの転送経路を決定するための情報をまとめた表を何と呼びますか？', answerPattern:/^(ルーティングテーブル|routing table)$/i, explanation:'経路情報を保持する表はルーティングテーブルです。', tags:['ルーティング'], difficulty:1},
+  {id:'q18', type:'short', stem:'Webページの閲覧に使われるプロトコルは何ですか？', answerPattern:/^HTTP$/i, explanation:'閲覧にはHTTPが用いられます。', tags:['Web','プロトコル'], difficulty:1},
+
+  // --- 情報セキュリティ（15問） ---
+  {id:'q27', type:'short', stem:'情報の「機密性」「完全性」「可用性」を確保することを何と呼びますか？', answerPattern:/^(情報セキュリティ|information security)$/i, explanation:'3要素を守るのが情報セキュリティです。', tags:['セキュリティ基礎'], difficulty:1},
+  {id:'q28', type:'short', stem:'ある情報へのアクセスを認められた人だけが、その情報にアクセスできる状態を何といいますか？', answerPattern:/^(機密性|confidentiality)$/i, explanation:'CIAのCは機密性です。', tags:['セキュリティ基礎'], difficulty:1},
+  {id:'q29', type:'short', stem:'情報が破壊、改ざん、または消去されていない状態を何といいますか？', answerPattern:/^(完全性|integrity)$/i, explanation:'CIAのIは完全性です。', tags:['セキュリティ基礎'], difficulty:1},
+  {id:'q30', type:'short', stem:'認められた人が、必要な時に中断することなく情報にアクセスできる状態を何といいますか？', answerPattern:/^(可用性|availability)$/i, explanation:'CIAのAは可用性です。', tags:['セキュリティ基礎'], difficulty:1},
+  {id:'q31', type:'short', stem:'コンピュータやサービスを利用する際に、正規の利用者であることを識別するためのものを何と呼びますか？', answerPattern:/^(ユーザ(?:ー)?ID|ユーザーID|ユーザID|user id)$/i, explanation:'識別子はユーザIDです。', tags:['アカウント'], difficulty:1},
+  {id:'q32', type:'short', stem:'ユーザIDと組み合わせて、本人であることを確認するために使われるものを何と呼びますか？', answerPattern:/^(パスワード|password)$/i, explanation:'認証要素の一つはパスワードです。', tags:['アカウント'], difficulty:1},
+  {id:'q33', type:'short', stem:'パスワードの盗み見など、人為的な手段で機密情報を入手する行為を何と呼びますか？', answerPattern:/^(ソーシャルエンジニアリング|social engineering)$/i, explanation:'人の心理や不注意を突く攻撃です。', tags:['セキュリティ基礎'], difficulty:1},
+  {id:'q34', type:'short', stem:'ファイルを勝手に暗号化し、解除と引き換えに金銭を要求するマルウェアを何と呼びますか？', answerPattern:/^(ランサムウェア|ransomware)$/i, explanation:'身代金要求型マルウェアです。', tags:['マルウェア'], difficulty:1},
+  {id:'q35', type:'short', stem:'情報を勝手に外部に送信してしまうマルウェアを何と呼びますか？', answerPattern:/^(スパイウェア|spyware)$/i, explanation:'情報漏えいを狙うスパイウェアです。', tags:['マルウェア'], difficulty:1},
+  {id:'q37', type:'short', stem:'ソフトウェアの脆弱性を修正するために提供されるプログラムを何と呼びますか？', answerPattern:/^(セキュリティパッチ|security patch)$/i, explanation:'修正プログラムはセキュリティパッチです。', tags:['脆弱性対策'], difficulty:1},
+  {id:'q38', type:'short', stem:'外部からの不正アクセスを防止するために、ネットワークの間に設置する装置やソフトウェアの総称を何と呼びますか？', answerPattern:/^(ファイアウォール|ファイヤーウォール|firewall)$/i, explanation:'境界で制御するファイアウォールです。', tags:['ネットワークセキュリティ'], difficulty:1},
+  {id:'q39', type:'short', stem:'企業や組織における、情報セキュリティ対策の方針や行動指針を何と呼びますか？', answerPattern:/^(情報セキュリティポリシー|security policy|information security policy)$/i, explanation:'組織の方針は情報セキュリティポリシーです。', tags:['ガバナンス'], difficulty:1},
+  {id:'q42', type:'short', stem:'第三者に内容がわからないように、一定の規則に従ってデータを変換する技術を何と呼びますか？', answerPattern:/^(暗号化|encryption)$/i, explanation:'秘匿化のための暗号化です。', tags:['暗号'], difficulty:1},
+  {id:'q45', type:'short', stem:'暗号化と復号に同じ鍵を使う暗号方式を何と呼びますか？', answerPattern:/^(共通鍵暗号(?:方式)?|対称鍵暗号(?:方式)?|symmetric key(?: cryptography| encryption)?)$/i, explanation:'同一鍵を用いるのは共通鍵（対称鍵）暗号です。', tags:['暗号'], difficulty:1},
+  {id:'q46', type:'short', stem:'暗号化に使う「公開鍵」と、復号に使う「秘密鍵」という異なる鍵のペアを使う方式を何と呼びますか？', answerPattern:/^(公開鍵暗号(?:方式)?|非対称鍵暗号(?:方式)?|public key(?: cryptography| encryption)?)$/i, explanation:'異なる鍵を使うのは公開鍵（非対称鍵）暗号です。', tags:['暗号'], difficulty:1},
+  {id:'q47', type:'short', stem:'公開鍵暗号方式の性質を応用し、発信者が本人であることを証明する方法を何と呼びますか？', answerPattern:/^(デジタル署名|電子署名|digital signature)$/i, explanation:'本人性と改ざん検知に用いるデジタル署名です。', tags:['暗号','認証'], difficulty:1}
+];
+
+/********************
+ * ユーティリティ
+ ********************/
+const $ = sel => document.querySelector(sel);
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+function zenkakuToHankakuDigits(s){return s.replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0xFEE0));}
+
+/********************
+ * 状態
+ ********************/
+let state = {
+  order: [], answers: {}, current: 0, startedAt: null, endsAt: null,
+  submitted: false, score: 0, tagStats: {}
+};
+
+/********************
+ * 初期化
+ ********************/
+function init(){
+  document.title = CONFIG.title + ' - CBT 一問一答';
+  const saved = load();
+  if(saved){ state = {...state, ...saved}; }
+  if(!state.order.length){
+    const ids = QUESTIONS.map(q=>q.id);
+    state.order = CONFIG.shuffleQuestions ? shuffle(ids) : ids;
+  }
+  if(CONFIG.timeLimitMinutes>0 && !state.endsAt){
+    const now = Date.now();
+    state.startedAt = now;
+    state.endsAt = now + CONFIG.timeLimitMinutes*60*1000;
+  }
+  render();
+  setupKeys();
+  tick();
+}
+
+/********************
+ * 保存/読込
+ ********************/
+function save(){ try{ localStorage.setItem(CONFIG.persistKey, JSON.stringify(state)); }catch(e){} }
+function load(){ try{ const raw = localStorage.getItem(CONFIG.persistKey); if(!raw) return null; const obj = JSON.parse(raw); if(!obj || !Array.isArray(obj.order)) return null; return obj; }catch(e){ return null; } }
+function resetAll(){ localStorage.removeItem(CONFIG.persistKey); location.reload(); }
+
+/********************
+ * レンダリング
+ ********************/
+function render(){
+  const total = state.order.length;
+  const idx = clamp(state.current,0,total-1);
+  state.current = idx;
+  const q = getQuestionByOrder(idx);
+
+  // メタ & 進捗
+  $('#meta').textContent = `${CONFIG.title} — 問題 ${idx+1} / ${total}`;
+  $('#progress').style.width = `${((idx)/Math.max(1,total-1))*100}%`;
+
+  const screen = $('#screen');
+  screen.textContent = '';
+
+  if(state.submitted){ screen.appendChild(renderResult()); return; }
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+
+  const fs = document.createElement('fieldset');
+  fs.setAttribute('role','group');
+  const lg = document.createElement('legend');
+  lg.textContent = q.stem;
+  fs.appendChild(lg);
+
+  if(q.type==='single'){
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'opts';
+    (q.options||[]).forEach((text,i)=>{
+      const id = `opt-${q.id}-${i}`;
+      const label = document.createElement('label');
+      label.className = 'opt';
+      label.setAttribute('for', id);
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = `q-${q.id}`; input.id = id; input.value = i;
+      const saved = state.answers[q.id];
+      if(saved && saved.type==='single' && saved.choiceIndex===i){ input.checked = true; }
+      input.addEventListener('change',()=>{ state.answers[q.id] = {type:'single', choiceIndex: Number(input.value)}; save(); });
+      const txt = document.createElement('span'); txt.textContent = text;
+      label.appendChild(input); label.appendChild(txt); optsWrap.appendChild(label);
+    });
+    fs.appendChild(optsWrap);
+  } else if(q.type==='short'){
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = '解答を入力…';
+    inp.autocomplete = 'off';
+    inp.spellcheck = false;
+    inp.className = 'opt';
+    const saved = state.answers[q.id];
+    if(saved && saved.type==='short'){ inp.value = saved.text; }
+    inp.addEventListener('input',()=>{ state.answers[q.id] = {type:'short', text: inp.value}; save(); });
+    fs.appendChild(inp);
+  }
+
+  card.appendChild(fs);
+
+  const nav = document.createElement('div'); nav.className = 'nav';
+  const back = document.createElement('button'); back.textContent = '← 戻る'; back.className = 'secondary'; back.disabled = state.current===0 || !CONFIG.allowReviewBeforeSubmit; back.addEventListener('click',()=>{ state.current = clamp(state.current-1,0,total-1); save(); render(); });
+  const next = document.createElement('button'); next.textContent = (state.current===total-1) ? '解答を送信' : '次へ →'; next.addEventListener('click',()=>{ if(state.current===total-1){ submitAnswers(); } else { state.current = clamp(state.current+1,0,total-1); save(); render(); } });
+  nav.appendChild(back); nav.appendChild(next); card.appendChild(nav);
+  screen.appendChild(card);
+}
+
+function renderResult(){
+  const wrap = document.createElement('div'); wrap.className = 'result';
+  const h = document.createElement('h2'); h.textContent = '結果'; wrap.appendChild(h);
+
+  const stats = document.createElement('div'); stats.className = 'grid';
+  const total = state.order.length; const percent = Math.round((state.score/total)*100);
+  stats.appendChild(stat('得点', `${state.score} / ${total}（${percent}%）`));
+  if(CONFIG.timeLimitMinutes>0){ const remained = Math.max(0, state.endsAt - Date.now()); const used = CONFIG.timeLimitMinutes*60*1000 - remained; stats.appendChild(stat('経過時間', fmtTime(used))); }
+  const tagBox = document.createElement('div'); tagBox.className = 'stat';
+  const tagTitle = document.createElement('div'); tagTitle.style.fontWeight='700'; tagTitle.textContent = '分野別正答'; tagBox.appendChild(tagTitle);
+  const ul = document.createElement('ul'); ul.className = 'muted'; Object.entries(state.tagStats).forEach(([tag, {count, correct}])=>{ const li = document.createElement('li'); const pct = Math.round((correct/count)*100); li.textContent = `${tag}: ${correct}/${count}（${pct}%）`; ul.appendChild(li); }); tagBox.appendChild(ul);
+  stats.appendChild(tagBox); wrap.appendChild(stats);
+
+  if(CONFIG.showExplanationAfterSubmit){
+    const review = document.createElement('div'); review.className = 'panel';
+    const title = document.createElement('div'); title.style.fontWeight='700'; title.style.marginBottom='8px'; title.textContent = '解説レビュー（正解のみ）'; review.appendChild(title);
+    let anyShown = false;
+    state.order.forEach((qid, idx)=>{
+      const q = QUESTIONS.find(x=>x.id===qid); const your = state.answers[qid]; const correct = isCorrect(q, your); if(!correct) return;
+      const block = document.createElement('div'); block.className = 'explain correct';
+      const stem = document.createElement('div'); stem.innerHTML = `<strong>Q${idx+1}.</strong> ${escapeHtml(q.stem)}`;
+      const you = document.createElement('div'); you.className = 'muted'; you.textContent = 'あなたの解答: ' + formatYourAnswer(q, your);
+      const ans = document.createElement('div'); ans.textContent = '正解: ' + formatCorrect(q);
+      const tag = document.createElement('div'); tag.className = 'muted'; tag.textContent = q.tags?.join(', ') || '';
+      const exp = document.createElement('div'); exp.textContent = q.explanation || '';
+      block.appendChild(stem); block.appendChild(you); block.appendChild(ans); if(q.tags?.length) block.appendChild(tag); if(q.explanation) block.appendChild(exp);
+      review.appendChild(block); anyShown = true;
+    });
+    if(!anyShown){ const none = document.createElement('div'); none.className = 'muted'; none.textContent = '正解した問題の解説はありません。'; review.appendChild(none); }
+    wrap.appendChild(review);
+  }
+
+  const actions = document.createElement('div'); actions.className = 'nav';
+  const retry = document.createElement('button'); retry.textContent = 'もう一度やる'; retry.addEventListener('click', ()=> resetAll());
+  const exportBtn = document.createElement('button'); exportBtn.className = 'secondary'; exportBtn.textContent = '結果をJSONで保存';
+  exportBtn.addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify({score: state.score, answers: state.answers, tagStats: state.tagStats}, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'result.json'; a.click(); URL.revokeObjectURL(url); });
+  actions.appendChild(retry); actions.appendChild(exportBtn); wrap.appendChild(actions);
+  return wrap;
+}
+function stat(label, value){ const d = document.createElement('div'); d.className = 'stat'; d.innerHTML = `<div class="muted">${label}</div><div style="font-size:20px;font-weight:700">${value}</div>`; return d; }
+
+/********************
+ * 採点
+ ********************/
+function submitAnswers(){
+  let score = 0; const tagStats = {};
+  state.order.forEach(qid=>{
+    const q = QUESTIONS.find(x=>x.id===qid); const a = state.answers[qid]; const ok = isCorrect(q,a); if(ok) score++;
+    (q.tags||['(未分類)']).forEach(tag=>{ if(!tagStats[tag]) tagStats[tag] = {count:0, correct:0}; tagStats[tag].count += 1; tagStats[tag].correct += ok ? 1 : 0; });
+  });
+  state.score = score; state.tagStats = tagStats; state.submitted = true; save(); render();
+}
+
+function isCorrect(q, a){
+  if(!a) return false;
+  if(q.type==='single'){ return a.choiceIndex === q.correctIndex; }
+  else if(q.type==='short'){ const text = zenkakuToHankakuDigits((a.text||'').trim()); if(!(q.answerPattern instanceof RegExp)) return false; return q.answerPattern.test(text); }
+  return false;
+}
+
+function formatYourAnswer(q, a){ if(!a) return '未回答'; if(q.type==='single') return q.options[a.choiceIndex] ?? '(未選択)'; if(q.type==='short') return a.text || '(未入力)'; }
+function formatCorrect(q){ if(q.type==='single') return q.options[q.correctIndex]; if(q.type==='short') return q.answerPattern.toString(); }
+
+/********************
+ * タイマー
+ ********************/
+function fmtTime(ms){ const t = Math.max(0, Math.floor(ms/1000)); const m = Math.floor(t/60).toString().padStart(2,'0'); const s = (t%60).toString().padStart(2,'0'); return `${m}:${s}`; }
+function tick(){ if(CONFIG.timeLimitMinutes>0 && state.endsAt){ const remain = state.endsAt - Date.now(); $('#timer').textContent = fmtTime(remain); if(remain<=0 && !state.submitted){ submitAnswers(); } } else { $('#timer').textContent = '--:--'; } requestAnimationFrame(()=>setTimeout(tick, 250)); }
+
+/********************
+ * 入力（キーボード）
+ ********************/
+function setupKeys(){
+  window.addEventListener('keydown', (e)=>{
+    if(state.submitted) return;
+    // Backspaceでブラウザの戻る動作を防止（入力欄以外）
+    if(e.key==='Backspace'){
+      const t = e.target; const isEditable = t.isContentEditable || (t.tagName==='INPUT' || t.tagName==='TEXTAREA');
+      if(!isEditable){ e.preventDefault(); }
+      return; // 以降の処理はしない
+    }
+    const q = getQuestionByOrder(state.current);
+    if(e.key>='1' && e.key<='9' && q.type==='single'){
+      const idx = Number(e.key)-1;
+      const radios = document.querySelectorAll(`input[name="q-${q.id}"]`);
+      if(radios[idx]){ radios[idx].checked = true; radios[idx].dispatchEvent(new Event('change')); }
+    }
+    if(e.key==='Enter'){
+      const total = state.order.length;
+      if(state.current===total-1){ submitAnswers(); }
+      else { state.current = clamp(state.current+1,0,total-1); save(); render(); }
+    }
+  });
+}
+
+/********************
+ * 補助
+ ********************/
+function getQuestionByOrder(i){ const qid = state.order[i]; return QUESTIONS.find(q=>q.id===qid); }
+function escapeHtml(s){ return String(s).replace(/[&<>\"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+// 起動
+init();
+</script>
+</body>
+</html>
