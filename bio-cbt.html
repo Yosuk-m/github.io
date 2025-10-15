@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>植物の応答とホルモン CBT（全50問）</title>
+  <style>
+    :root{--bg:#0b1020;--panel:#121a33;--accent:#6aa1ff;--text:#e9eefc;--muted:#a8b3d6;--danger:#ff6a7a;--good:#5ad39d;--tap:48px}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(160deg,#0b1020,#101830 55%,#0b1020);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    .container{max-width:900px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .brand{font-weight:700;letter-spacing:.3px}
+    .panel{background:var(--panel);border:1px solid rgba(255,255,255,.05);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:20px}
+    .meta{margin:10px 0 16px}
+    .muted{color:var(--muted)}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:12px}
+    .progress{height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#b782ff);width:0}
+    .question-card{display:grid;gap:16px}
+    fieldset{border:0;margin:0;padding:0}
+    legend{font-weight:700;font-size:20px;margin-bottom:8px}
+    .opts{display:grid;gap:10px}
+    .opt{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;cursor:pointer;background:rgba(255,255,255,.02);min-height:var(--tap)}
+    .opt input{accent-color:var(--accent);width:var(--tap);height:var(--tap)}
+    .nav{display:flex;gap:10px;justify-content:space-between;margin-top:6px;flex-wrap:wrap}
+    button{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:#081225;box-shadow:0 6px 18px rgba(106,161,255,.35)}
+    button.secondary{background:rgba(255,255,255,.08);color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,.12)}
+    button.ghost{background:transparent;color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,.12)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .timer{font-variant-numeric:tabular-nums}
+    .kbd{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:1px 6px;border-radius:6px;font-size:12px}
+    .footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px}
+    .result{display:grid;gap:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:14px;border-radius:14px}
+    .explain{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:12px;margin-top:8px}
+    .explain.wrong{outline:2px solid var(--danger);background:rgba(255,106,122,.08)}
+    .explain.correct{outline:2px solid var(--good);background:rgba(90,211,157,.08)}
+    a.link{color:#a2c4ff}
+
+    /* Mobile */
+    button,input,label{touch-action:manipulation}
+    @supports(padding:max(0px)){.container{padding-bottom:max(24px,env(safe-area-inset-bottom))}}
+    @media (max-width:640px){
+      .container{padding:12px}
+      legend{font-size:18px}
+      .panel{padding:16px;border-radius:16px}
+      .opt{padding:14px}
+      .opt span{font-size:16px;line-height:1.4}
+      .opt input{transform:scale(1.2)}
+      .nav{flex-direction:column;gap:8px}
+      .nav button{width:100%}
+      .chip{font-size:12px;padding:6px 8px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">CBT 一問一答</div>
+      <div class="chip" aria-live="polite"><span aria-hidden="true">🕒</span><span class="timer" id="timer">--:--</span></div>
+    </header>
+
+    <div class="panel" aria-live="polite">
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+      <div class="muted meta" id="meta"></div>
+      <div id="screen"></div>
+    </div>
+
+    <div class="footer">
+      <div class="muted">ショートカット: <span class="kbd">1-9</span> 選択 / <span class="kbd">Enter</span> 次へ</div>
+      <div class="muted">進捗は自動保存されます。</div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+
+/********************
+ * 設定
+ ********************/
+const CONFIG = {
+  title: '植物の応答とホルモン CBT（全50問）',
+  timeLimitMinutes: 50,
+  shuffleQuestions: true,
+  shuffleOptions: false,
+  allowReviewBeforeSubmit: true,
+  showExplanationAfterSubmit: true,
+  persistKey: 'cbt-plant-physiology-final-v1'
+};
+
+/********************
+ * 問題データ（50問）
+ ********************/
+function q(n, stem, opts, correct, tags, exp){
+  return { id: 'q'+n, type: 'single', stem, options:[`A. ${opts[0]}`,`B. ${opts[1]}`,`C. ${opts[2]}`,`D. ${opts[3]}`], correctIndex: correct, tags, explanation: exp, difficulty: 2 };
+}
+const QUESTIONS = [
+  q(1,"刺激に対して方向性のある植物の運動を指す用語として最も適切なものはどれか。",["傾性","屈性","膨圧運動","成長運動"],1,["屈性"],"刺激方向に依存して曲がる運動を屈性（tropism）という。"),
+  q(2,"刺激に対する方向性のない植物の運動として最も適切なものはどれか。",["光屈性","重力屈性","屈性","傾性"],3,["傾性"],"刺激方向に依存しない応答は傾性（ナスティ）。"),
+  q(3,"気孔の開閉やオジギソウの就眠運動のように、細胞の膨圧の変化によって引き起こされる植物の運動の様式はどれか。",["屈性","傾性","膨圧運動","成長運動"],2,["膨圧運動"],"膨圧変化による運動を膨圧運動という。"),
+  q(4,"茎や根の先端部で合成され、細胞の成長促進（細胞壁を緩める）や頂芽優勢に関わる植物ホルモンはどれか。",["ジベレリン","サイトカイニン","エチレン","オーキシン"],3,["ホルモン","オーキシン"],"オーキシンは細胞壁の緩化による伸長促進・頂芽優勢に関与。"),
+  q(5,"芽生えの茎が光の方向に曲がる現象は、オーキシンが光の当たらない陰側に多く移動し、陰側の細胞成長が促進されることによって起こる。この現象を何と呼ぶか。",["負の光屈性","正の光屈性","正の重力屈性","接触屈性"],1,["屈性","光屈性"],"茎は光源へ曲がるため正の光屈性。"),
+  q(6,"オーキシンに対する感受性（同じ濃度で成長促進または抑制効果を示す程度）が最も高い器官はどれか。",["茎","芽","根","葉"],2,["ホルモン","オーキシン"],"根は低濃度オーキシンで促進されるほど感受性が高い。"),
+  q(7,"幼葉鞘の先端部で合成されたオーキシンが、基部へと一定の方向に輸送される移動様式を特に何と呼ぶか。",["拡散移動","極性移動","横方向輸送","順方向輸送"],1,["オーキシン"],"オーキシンの先端→基部への一定方向輸送は極性移動。"),
+  q(8,"細胞分裂を促進し、カルスからの茎や葉の分化を促し、細胞の老化抑制や気孔の開放（蒸散の促進）に関わる植物ホルモンはどれか。",["アブシシン酸","サイトカイニン","ジベレリン","エチレン"],1,["ホルモン","サイトカイニン"],"サイトカイニンは細胞分裂促進・シュート分化・老化抑制に関わる。"),
+  q(9,"細胞の伸長成長促進、子房の発達促進（単為結実）、休眠打破の作用を持つ植物ホルモンはどれか。",["オーキシン","ジベレリン","アブシシン酸","フロリゲン"],1,["ホルモン","ジベレリン"],"ジベレリンは伸長促進・発芽/休眠打破・単為結果などに関与。"),
+  q(10,"果実の成熟促進や落葉の促進、離層の形成促進に関わる気体状の植物ホルモンはどれか。",["メタン","エチレン","水蒸気","二酸化炭素"],1,["ホルモン","エチレン"],"エチレンは成熟促進・離層形成促進。"),
+  q(11,"乾燥などの水ストレス下で合成され、気孔の閉鎖や休眠維持の作用を持つ植物ホルモンはどれか。",["インドール酢酸","ジベレリン","アブシシン酸","ジャスモン酸"],2,["ホルモン","ABA"],"ABAは乾燥応答で閉孔・休眠維持に働く。"),
+  q(12,"花芽形成に関与する「花成ホルモン」として知られる物質はどれか。",["オーキシン","ジベレリン","フロリゲン","サイトカイニン"],2,["ホルモン","光周性"],"フロリゲンは葉で合成され花芽形成を促すシグナル。"),
+  q(13,"重力屈性において、茎が重力に対して上方（重力とは反対方向）に成長する性質を何と呼ぶか。",["正の重力屈性","負の重力屈性","正の光屈性","重力傾性"],1,["屈性","重力屈性"],"茎は負の重力屈性を示す。"),
+  q(14,"茎の屈曲が最も効果的に引き起こされる光の波長域はおよそ何色光であるか。",["赤色光","青色光","緑色光","近赤外光"],1,["光屈性","光受容体"],"光屈性は青色光で強く誘導。"),
+  q(15,"屈性に分類される植物の運動はどれか。",["オジギソウに触れたときの葉の閉鎖","タンポポの花の光による開閉","根が水分を感知して伸長の方向を変えること（水分屈性）","チューリップの花の温度による開閉"],2,["屈性"],"根の向水性は刺激方向に依存する屈性。"),
+  q(16,"頂芽優勢に関わる二つの植物ホルモンの組み合わせとして最も適切なものはどれか。",["オーキシンとエチレン","オーキシンとサイトカイニン","ジベレリンとアブシシン酸","サイトカイニンとアブシシン酸"],1,["ホルモン"],"頂芽優勢はオーキシン（側芽抑制）とサイトカイニン（側芽成長促進）の相互作用。"),
+  q(17,"光屈性において、屈曲する部分の影側の細胞の伸長は、光が当たっている側の細胞の伸長と比べてどうなるか。",["小さい","変わらない","大きい","分裂が盛んである"],2,["光屈性"],"オーキシン偏在により陰側の伸長がより大きくなる。"),
+  q(18,"生物が外部環境の明暗周期を刺激として受容し、開花などの反応をする性質を何と呼ぶか。",["屈性","光周性","傾性","日周運動"],1,["光周性"],"日長（実際は暗期長）に応じて開花などを制御する性質。"),
+  q(19,"限界暗期よりも短い暗期長で花芽形成が促進される植物群はどれか。",["短日植物","長日植物","中性植物","限界植物"],1,["光周性"],"長日植物は短い夜（長い日）で開花が促進される。"),
+  q(20,"限界暗期よりも長い暗期長で花芽形成が促進される植物群はどれか。",["長日植物","中性植物","短日植物","限界植物"],2,["光周性"],"短日植物は長い夜（短い日）で開花が促進される。"),
+  q(21,"長日植物に分類される植物の例として最も適切なものはどれか。",["イネ","アサガオ","ダイコン","ダイズ"],2,["光周性"],"ダイコン（ほかホウレンソウ、コムギ等）は長日植物。"),
+  q(22,"短日植物に分類される植物の例として最も適切なものはどれか。",["ホウレンソウ","コムギ","コスモス","エンドウ"],2,["光周性"],"コスモスは短日植物。"),
+  q(23,"日長に関係なく花芽を形成する植物群はどれか。",["長日植物","短日植物","中性植物","限界植物"],2,["光周性"],"日長に依存しないのは中性植物。"),
+  q(24,"短日植物であるオナモミの花芽形成にとって、実験結果から最も重要であると結論付けられる条件は何か。",["長時間の連続した明期","長時間の連続した暗期","連続した短時間の日長","明期の長さ"],1,["光周性"],"短日植物では『連続した長い暗期』が決定的。"),
+  q(25,"光周性において光刺激の受容に関わる、赤色光吸収型（R型）と遠赤色光吸収型（FR型）がある色素タンパク質は何か。",["クロロフィル","カロテノイド","フィトクロム","アブシシン"],2,["光周性","フィトクロム"],"光形態形成を司るフィトクロムはR/FRで可逆変換。"),
+  q(26,"フィトクロムのR型は、どの光を吸収するとFR型に変化するか。",["遠赤色光","青色光","緑色光","赤色光"],3,["フィトクロム"],"R型は赤色光でFR型に変換。"),
+  q(27,"短日植物（オナモミなど）において、花芽形成に必要な連続暗期を光で短時間中断した場合、花芽形成はどうなるか。",["促進される","抑制される","変化しない","フロリゲンの合成量が低下するが影響はない"],1,["光周性"],"夜間中断光は短日植物の開花を抑制。"),
+  q(28,"短日植物の開花を促す物質（フロリゲン）は、植物体のどの器官で主に合成されるか。",["茎頂","根","葉","胚乳"],2,["光周性","フロリゲン"],"光を受容した葉で合成される。"),
+  q(29,"開花を促すホルモン（フロリゲン）は、合成された場所から他の場所へ移動する際、主にどの組織を通って運ばれるか。",["道管（木部）","形成層","表皮組織","師管（師部）"],3,["光周性","輸送"],"同化産物と同様に師管（篩部）を通って輸送。"),
+  q(30,"短日植物であるシソ（実験Ⅰ：暗期16時間で開花、実験Ⅱ：暗期8時間で開花せず）の限界暗期として最も適切な範囲はどれか。",["8時間より短い","8時間より長く16時間以下","16時間より長い","8時間と16時間のどちらでもない"],1,["光周性"],"8hでは不足、16hで十分→限界暗期は8h超〜16h以下。"),
+  q(31,"秋まきコムギの種子が春にまいても花芽を形成できない（開花しない）主な理由は何によるか。",["種子の休眠がジベレリンによって維持されているため","長日植物であり、春の日長条件が不適であるため","花芽形成のためには、あらかじめ低温刺激を必要とするため","光周性が関与しない中性植物であるため"],2,["春化","光周性"],"秋まき型は春化（低温処理）を経ないと花成しない。"),
+  q(32,"オナモミ（短日植物）を用いた実験で、葉を全部取り除いて短日処理を行った場合、花芽形成は見られなかった。この結果から考えられることは何か。",["根で光刺激が受容される","花芽形成に必須な物質は葉でつくられる","茎で光刺激が受容される","胚乳に貯蔵物質が必要である"],1,["光周性"],"葉で光受容とフロリゲン合成が行われる。"),
+  q(33,"アブラナは長日植物である。アブラナの幼苗に対し、明期9時間／暗期15時間の条件（短日条件）を与えた場合、花芽形成は起こるか。",["起こる","起こらない","限界暗期を超えるため促進される","中性植物のため関係なく起こる"],1,["光周性"],"長日植物に短日は不適→花芽形成は起こらない。"),
+  q(34,"遠赤色光を吸収するフィトクロムの型はどれか。",["R型","B型","FR型","UV型"],2,["フィトクロム"],"遠赤色光を主に吸収するのはFR型。"),
+  q(35,"長日植物は高緯度地域や山地などで見られることが多い。これらの植物は、昼が長くなるどの季節に開花する例が多いか。",["秋咲き","冬咲き","夏咲き","春咲き"],2,["光周性"],"日長が最も長い初夏〜夏に開花する例が多い。"),
+  q(36,"植物ホルモンのうち、種子の発芽を促進する作用を持つものはどれか。",["オーキシン","アブシシン酸","ジベレリン","エチレン"],2,["発芽","ホルモン"],"ジベレリンは発芽促進。"),
+  q(37,"植物ホルモンのうち、種子の発芽を抑制し、休眠を維持する作用を持つものはどれか。",["フロリゲン","ジベレリン","サイトカイニン","アブシシン酸"],3,["発芽","ホルモン"],"ABAは発芽抑制・休眠維持。"),
+  q(38,"オオムギの種子において、吸水時にジベレリンが合成されるのはどの部分か。",["胚乳","種皮","糊粉層","胚"],3,["発芽","オオムギ"],"胚（特に肧盤）がGAを合成し糊粉層を刺激。"),
+  q(39,"オオムギの種子で、ジベレリンの作用により糊粉層で合成され、胚乳のデンプンを分解する酵素は何か。",["アミラーゼ","プロテアーゼ","リパーゼ","リゾチーム"],0,["発芽","オオムギ"],"GA刺激で糊粉層がアミラーゼを合成し澱粉を分解。"),
+  q(40,"光を発芽条件の一つとして必要とする種子を何と呼ぶか。",["暗発芽種子","休眠種子","光発芽種子","限界発芽種子"],2,["発芽"],"光を必要とするのは光発芽種子。"),
+  q(41,"レタスやタバコの種子に見られる光発芽の現象は、主にどの光によって促進されるか。",["青色光","遠赤色光","赤色光","緑色光"],2,["発芽","フィトクロム"],"赤色光で促進され、遠赤で可逆的に抑制される。"),
+  q(42,"発芽の際に赤色光で促進された効果を抑制する作用を持つ光はどれか。",["遠赤色光（波長域b）","赤色光（波長域a）","青色光","紫外線"],0,["発芽","フィトクロム"],"遠赤色光で赤色光の効果が打ち消される（可逆性）。"),
+  q(43,"被子植物の種子を構成し、胚と胚乳を包み、物理的傷害や水や酸素から種子を守る役割を持つ強固な組織は何か。",["胚","胚乳","子葉","種皮"],3,["種子"],"種皮が保護構造。"),
+  q(44,"植物が根から葉まで水を吸い上げる原動力として関与している現象として、最も主要なものはどれか。",["根圧","浸透圧","水分子の凝集力","気孔からの蒸散"],3,["水輸送"],"主因は蒸散引力（cohesion-tension説）。"),
+  q(45,"根から吸収された水が植物体の隅々まで運ばれる管（水の通り道）はどれか。",["師管","道管","形成層","表皮"],1,["維管束"],"水は道管（木部）を通る。"),
+  q(46,"根で吸収された水の大部分が体外に水蒸気として放出される場所はどこか。",["根毛","葉緑体","水孔","気孔"],3,["蒸散"],"主に葉の気孔から放出される。"),
+  q(47,"光合成で合成された糖などの有機物が植物体全体に運ばれる管（有機物の通り道）はどれか。",["道管","師管","根毛","葉脈"],1,["維管束"],"有機物は師管（篩部）で転流する。"),
+  q(48,"水分不足によりアブシシン酸濃度が上昇し、気孔が閉じる過程で、孔辺細胞内で起こる現象はどれか。",["孔辺細胞がK^+を吸収する。","孔辺細胞の膨圧が上昇する。","孔辺細胞の浸透圧が減少し、排水が起こる。","孔辺細胞が湾曲した状態を維持する。"],2,["気孔","ABA"],"ABAでK^+や溶質が流出→浸透圧低下→膨圧低下→閉孔。"),
+  q(49,"オオムギの種子を半分に切って、胚のついている半分（A）とついていない半分（B）に分け、湿らせたろ紙の上で培養した場合、胚乳の分解がみられると予想されるのはどちらか。",["Aのみ","Bのみ","A、Bどちらにもみられない","A、Bどちらにもみられる"],0,["発芽","オオムギ"],"胚がGAを供給できるA側でのみアミラーゼが誘導される。"),
+  q(50,"他の植物が周囲によく茂っている場所では、赤色光は地上に届きにくいが遠赤色光が多く届く。光発芽種子にとって、遠赤色光を吸収すると発芽が抑制される反応を示すことの利点は何か。",["発芽を促進させ、成長競争に勝つことができる。","水分不足時に発芽を抑制できる。","他の植物が多い光合成に不適な条件下での発芽が抑制される。","種子の休眠状態が強制的に破られる。"],2,["発芽","フィトクロム"],"遮蔽環境（遠赤多い・光合成に不利）での不適切な発芽を回避できる。")
+];
+
+/********************
+ * ユーティリティ
+ ********************/
+const $ = sel => document.querySelector(sel);
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+
+/********************
+ * 状態
+ ********************/
+let state = { order: [], answers: {}, current: 0, startedAt: null, endsAt: null, submitted: false, score: 0, tagStats: {} };
+
+/********************
+ * 初期化
+ ********************/
+function init(){
+  document.title = CONFIG.title + ' - CBT 一問一答';
+  // Backspaceで戻る無効（入力欄では可）
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'Backspace'){
+      const t = e.target; const editable = t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
+      if(!editable) e.preventDefault();
+    }
+  }, {capture:true});
+
+  const saved = load(); if(saved){ state = {...state, ...saved}; }
+  if(!state.order.length){ const ids = QUESTIONS.map(q=>q.id); state.order = CONFIG.shuffleQuestions ? shuffle(ids) : ids; }
+  if(CONFIG.timeLimitMinutes>0 && !state.endsAt){ const now = Date.now(); state.startedAt = now; state.endsAt = now + CONFIG.timeLimitMinutes*60*1000; }
+  render(); setupKeys(); tick(); selfTest();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+/********************
+ * 保存/読込
+ ********************/
+function save(){ try{ localStorage.setItem(CONFIG.persistKey, JSON.stringify(state)); }catch(e){} }
+function load(){ try{ const raw = localStorage.getItem(CONFIG.persistKey); if(!raw) return null; const obj = JSON.parse(raw); if(!obj || !Array.isArray(obj.order)) return null; return obj; }catch(e){ return null; } }
+function resetAll(){ localStorage.removeItem(CONFIG.persistKey); location.reload(); }
+
+/********************
+ * レンダリング
+ ********************/
+function render(){
+  const total = state.order.length; const idx = clamp(state.current,0,total-1); state.current = idx;
+  const q = getQuestionByOrder(idx);
+
+  document.getElementById('meta').textContent = `${CONFIG.title} — 問題 ${idx+1} / ${total}`;
+  document.getElementById('progress').style.width = `${((idx)/Math.max(1,total-1))*100}%`;
+
+  const screen = document.getElementById('screen'); screen.textContent = '';
+
+  if(state.submitted){ screen.appendChild(renderResult()); return; }
+
+  const card = document.createElement('div'); card.className = 'question-card';
+
+  const fs = document.createElement('fieldset'); fs.setAttribute('role','group');
+  const lg = document.createElement('legend'); lg.textContent = q.stem; fs.appendChild(lg);
+
+  const optsWrap = document.createElement('div'); optsWrap.className = 'opts';
+  (q.options||[]).forEach((text,i)=>{
+    const id = `opt-${q.id}-${i}`;
+    const label = document.createElement('label'); label.className='opt'; label.setAttribute('for',id);
+    const input = document.createElement('input'); input.type='radio'; input.name=`q-${q.id}`; input.id=id; input.value=i;
+    const saved = state.answers[q.id]; if(saved && saved.type==='single' && saved.choiceIndex===i){ input.checked = true; }
+    input.addEventListener('change',()=>{ state.answers[q.id] = {type:'single', choiceIndex:Number(input.value)}; save(); });
+    const txt = document.createElement('span'); txt.textContent = text;
+    label.appendChild(input); label.appendChild(txt); optsWrap.appendChild(label);
+  });
+  fs.appendChild(optsWrap);
+
+  card.appendChild(fs);
+
+  const nav = document.createElement('div'); nav.className='nav';
+  const back = document.createElement('button'); back.textContent='← 戻る'; back.className='secondary'; back.disabled = state.current===0 || !CONFIG.allowReviewBeforeSubmit;
+  back.addEventListener('click',()=>{ state.current = Math.max(0, state.current-1); save(); render(); });
+  const next = document.createElement('button'); next.textContent = (state.current===total-1) ? '解答を送信' : '次へ →';
+  next.addEventListener('click',()=>{ if(state.current===total-1){ submitAnswers(); } else { state.current = Math.min(total-1, state.current+1); save(); render(); } });
+  nav.appendChild(back); nav.appendChild(next); card.appendChild(nav);
+
+  screen.appendChild(card);
+}
+
+function renderResult(){
+  const wrap = document.createElement('div'); wrap.className='result';
+  const h = document.createElement('h2'); h.textContent = '結果'; wrap.appendChild(h);
+
+  const stats = document.createElement('div'); stats.className = 'grid';
+  const total = state.order.length; const percent = Math.round((state.score/total)*100);
+  stats.appendChild(stat('得点', `${state.score} / ${total}（${percent}%）`));
+  if(CONFIG.timeLimitMinutes>0){ const remained = Math.max(0, state.endsAt - Date.now()); const used = CONFIG.timeLimitMinutes*60*1000 - remained; stats.appendChild(stat('経過時間', fmtTime(used))); }
+
+  // タグ別
+  const tagBox = document.createElement('div'); tagBox.className='stat';
+  const tagTitle = document.createElement('div'); tagTitle.style.fontWeight='700'; tagTitle.textContent = '分野別正答'; tagBox.appendChild(tagTitle);
+  const ul = document.createElement('ul'); ul.className = 'muted';
+  Object.entries(state.tagStats).forEach(([tag, {count, correct}])=>{
+    const li = document.createElement('li'); const pct = Math.round((correct/count)*100); li.textContent = `${tag}: ${correct}/${count}（${pct}%）`; ul.appendChild(li);
+  });
+  tagBox.appendChild(ul); stats.appendChild(tagBox); wrap.appendChild(stats);
+
+  // 不正解レビュー（問題文のみ）
+  const wrongPanel = document.createElement('div'); wrongPanel.className='panel';
+  const wrongTitle = document.createElement('div'); wrongTitle.style.fontWeight='700'; wrongTitle.style.marginBottom='8px'; wrongTitle.textContent = '不正解レビュー（問題のみ）'; wrongPanel.appendChild(wrongTitle);
+  let anyWrong = false;
+  state.order.forEach((qid, idx)=>{
+    const q = QUESTIONS.find(x=>x.id===qid); const your = state.answers[qid]; const correct = isCorrect(q, your);
+    if(correct) return;
+    const block = document.createElement('div'); block.className = 'explain wrong';
+    const stem = document.createElement('div'); stem.innerHTML = `<strong>Q${idx+1}.</strong> ${escapeHtml(q.stem)}`;
+    block.appendChild(stem); wrongPanel.appendChild(block); anyWrong = true;
+  });
+  if(!anyWrong){ const none = document.createElement('div'); none.className = 'muted'; none.textContent = '不正解の問題はありません。'; wrongPanel.appendChild(none); }
+  wrap.appendChild(wrongPanel);
+
+  // 正解レビュー（解答＋解説）
+  const correctPanel = document.createElement('div'); correctPanel.className='panel';
+  const correctTitle = document.createElement('div'); correctTitle.style.fontWeight='700'; correctTitle.style.marginBottom='8px'; correctTitle.textContent = '正解レビュー（解答＋解説）'; correctPanel.appendChild(correctTitle);
+  let anyCorrect = false;
+  state.order.forEach((qid, idx)=>{
+    const q = QUESTIONS.find(x=>x.id===qid); const your = state.answers[qid]; const isOk = isCorrect(q, your);
+    if(!isOk) return;
+    const block = document.createElement('div'); block.className = 'explain correct';
+    const stem = document.createElement('div'); stem.innerHTML = `<strong>Q${idx+1}.</strong> ${escapeHtml(q.stem)}`;
+    const you = document.createElement('div'); you.className = 'muted'; you.textContent = 'あなたの解答: ' + formatYourAnswer(q, your);
+    const ans = document.createElement('div'); ans.textContent = '正解: ' + formatCorrect(q);
+    const exp = document.createElement('div'); exp.textContent = q.explanation || '';
+    block.appendChild(stem); block.appendChild(you); block.appendChild(ans); if(q.explanation) block.appendChild(exp);
+    correctPanel.appendChild(block); anyCorrect = true;
+  });
+  if(!anyCorrect){ const none = document.createElement('div'); none.className='muted'; none.textContent='正解した問題はありません。'; correctPanel.appendChild(none); }
+  wrap.appendChild(correctPanel);
+
+  // アクション
+  const actions = document.createElement('div'); actions.className='nav';
+  const retryIncorrect = document.createElement('button'); retryIncorrect.textContent='間違えた問題だけリトライ';
+  retryIncorrect.addEventListener('click', ()=>{ startRetry(true); });
+  const retryAll = document.createElement('button'); retryAll.className='secondary'; retryAll.textContent='全てリトライ';
+  retryAll.addEventListener('click', ()=>{ startRetry(false); });
+  const exportBtn = document.createElement('button'); exportBtn.className='ghost'; exportBtn.textContent='結果をJSONで保存';
+  exportBtn.addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify({score: state.score, answers: state.answers, tagStats: state.tagStats}, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'result.json'; a.click(); URL.revokeObjectURL(url);
+  });
+  actions.appendChild(retryIncorrect); actions.appendChild(retryAll); actions.appendChild(exportBtn); wrap.appendChild(actions);
+
+  return wrap;
+}
+function stat(label, value){ const d = document.createElement('div'); d.className = 'stat'; d.innerHTML = `<div class="muted">${label}</div><div style="font-size:20px;font-weight:700">${value}</div>`; return d; }
+
+/********************
+ * 採点
+ ********************/
+function submitAnswers(){
+  let score = 0; const tagStats = {};
+  state.order.forEach(qid=>{
+    const q = QUESTIONS.find(x=>x.id===qid);
+    const a = state.answers[qid];
+    const ok = isCorrect(q,a);
+    if(ok) score++;
+    (q.tags||['(未分類)']).forEach(tag=>{
+      if(!tagStats[tag]) tagStats[tag] = {count:0, correct:0};
+      tagStats[tag].count += 1;
+      tagStats[tag].correct += ok ? 1 : 0;
+    });
+  });
+  state.score = score; state.tagStats = tagStats; state.submitted = true; save(); render();
+}
+
+function isCorrect(q, a){
+  if(!a) return false;
+  if(q.type==='single'){ return a.choiceIndex === q.correctIndex; }
+  return false;
+}
+
+function formatYourAnswer(q, a){ if(!a) return '未回答'; if(q.type==='single') return q.options[a.choiceIndex] ?? '(未選択)'; }
+function formatCorrect(q){ if(q.type==='single') return q.options[q.correctIndex]; }
+
+/********************
+ * リトライ
+ ********************/
+function startRetry(incorrectOnly){
+  const incorrectIds = state.order.filter(qid=>!isCorrect(QUESTIONS.find(x=>x.id===qid), state.answers[qid]));
+  const newOrder = incorrectOnly ? incorrectIds : (CONFIG.shuffleQuestions ? shuffle(QUESTIONS.map(q=>q.id)) : QUESTIONS.map(q=>q.id));
+  state = { order: newOrder.slice(), answers: {}, current: 0, startedAt: Date.now(), endsAt: Date.now() + CONFIG.timeLimitMinutes*60*1000, submitted: false, score: 0, tagStats: {} };
+  save(); render();
+}
+
+/********************
+ * タイマーと入力
+ ********************/
+function fmtTime(ms){ const t=Math.max(0,Math.floor(ms/1000)); const m=Math.floor(t/60).toString().padStart(2,'0'); const s=(t%60).toString().padStart(2,'0'); return `${m}:${s}`; }
+function tick(){ if(CONFIG.timeLimitMinutes>0 && state.endsAt){ const remain=state.endsAt - Date.now(); document.getElementById('timer').textContent = fmtTime(remain); if(remain<=0 && !state.submitted){ submitAnswers(); } } else { document.getElementById('timer').textContent = '--:--'; } requestAnimationFrame(()=>setTimeout(tick, 250)); }
+function setupKeys(){ window.addEventListener('keydown', (e)=>{ if(state.submitted) return; const q = getQuestionByOrder(state.current); if(e.key>='1' && e.key<='9' && q.type==='single'){ const idx = Number(e.key)-1; const radios = document.querySelectorAll(`input[name="q-${q.id}"]`); if(radios[idx]){ radios[idx].checked = true; radios[idx].dispatchEvent(new Event('change')); } } if(e.key==='Enter'){ const total = state.order.length; if(state.current===total-1){ submitAnswers(); } else { state.current = Math.min(total-1, state.current+1); save(); render(); } } }); }
+
+/********************
+ * 補助
+ ********************/
+function getQuestionByOrder(i){ const qid = state.order[i]; return QUESTIONS.find(q=>q.id===qid); }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+function selfTest(){
+  const errs = [];
+  if(QUESTIONS.length!==50) errs.push('問題数が50ではありません: '+QUESTIONS.length);
+  QUESTIONS.forEach((q,i)=>{ if(!q.id||!q.stem||!Array.isArray(q.options)||typeof q.correctIndex!=='number') errs.push('定義不備: Q'+(i+1)); });
+  if(errs.length) console.warn('[SELFTEST]', errs); else console.log('[SELFTEST] OK');
+}
+</script>
+</body>
+</html>
