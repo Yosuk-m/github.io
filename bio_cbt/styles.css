@@ -1,0 +1,49 @@
+:root{--bg:#0b1020;--panel:#121a33;--accent:#6aa1ff;--text:#e9eefc;--muted:#a8b3d6;--danger:#ff6a7a;--good:#5ad39d;--tap:48px}
+html,body{height:100%}
+body{margin:0;background:linear-gradient(160deg,#0b1020,#101830 55%,#0b1020);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+.container{max-width:900px;margin:0 auto;padding:24px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.brand{font-weight:700;letter-spacing:.3px}
+.panel{background:var(--panel);border:1px solid rgba(255,255,255,.05);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:20px}
+.meta{margin:10px 0 16px}
+.muted{color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:12px}
+.progress{height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#b782ff);width:0}
+.question-card{display:grid;gap:16px}
+fieldset{border:0;margin:0;padding:0}
+legend{font-weight:700;font-size:20px;margin-bottom:8px}
+.opts{display:grid;gap:10px}
+.opt{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;cursor:pointer;background:rgba(255,255,255,.02);min-height:var(--tap)}
+.opt input{accent-color:var(--accent);width:var(--tap);height:var(--tap)}
+.nav{display:flex;gap:10px;justify-content:space-between;margin-top:6px}
+button{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:#081225;box-shadow:0 6px 18px rgba(106,161,255,.35)}
+button.secondary{background:rgba(255,255,255,.08);color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,.12)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.timer{font-variant-numeric:tabular-nums}
+.kbd{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:1px 6px;border-radius:6px;font-size:12px}
+.footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px}
+.result{display:grid;gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:14px;border-radius:14px}
+.explain{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:12px;margin-top:8px}
+a.link{color:#a2c4ff}
+/* 対話型入力の視認性 */
+input.opt{display:block;width:100%;color:var(--text);background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);padding:12px 14px;border-radius:12px;font-size:16px;line-height:1.4;caret-color:var(--accent);cursor:text}
+input.opt::placeholder{color:var(--muted);opacity:.95}
+input.opt:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(106,161,255,.28);background:rgba(255,255,255,.14)}
+
+/* Mobile */
+button,input,label{touch-action:manipulation}
+@supports(padding:max(0px)){.container{padding-bottom:max(24px,env(safe-area-inset-bottom))}}
+@media (max-width:640px){
+  .container{padding:12px}
+  legend{font-size:18px}
+  .panel{padding:16px;border-radius:16px}
+  .opt{padding:14px}
+  .opt span{font-size:16px;line-height:1.4}
+  .opt input{transform:scale(1.2)}
+  .nav{flex-direction:column;gap:8px}
+  .nav button{width:100%}
+  .chip{font-size:12px;padding:6px 8px}
+}
