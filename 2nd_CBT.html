@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CBTテスト | 第3/4/6章からバランス抽出（第3章差し替え）</title>
+  <style>
+    :root{
+      --bg:#0b1020;--panel:#121a33;--accent:#6aa1ff;--text:#e9eefc;--muted:#a8b3d6;--danger:#ff6a7a;--good:#5ad39d
+    }
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(160deg,#0b1020,#101830 55%,#0b1020);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    .container{max-width:920px;margin:0 auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .brand{font-weight:700;letter-spacing:.3px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:12px}
+    .panel{background:var(--panel);border:1px solid rgba(255,255,255,.05);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:18px}
+    .muted{color:var(--muted)}
+    .progress{height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#b782ff);width:0}
+    .question-card{display:grid;gap:16px}
+    fieldset{border:0;margin:0;padding:0}
+    legend{font-weight:700;font-size:18px;margin-bottom:8px}
+    .opts{display:grid;gap:10px}
+    .opt{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;cursor:pointer;background:rgba(255,255,255,.02)}
+    .opt input{accent-color:var(--accent);margin-top:2px}
+    .opt.correct{outline:2px solid var(--good);background:rgba(90,211,157,.08)}
+    .opt.wrong{outline:2px solid var(--danger);background:rgba(255,106,122,.08)}
+    .nav{display:flex;gap:10px;justify-content:space-between;margin-top:6px;flex-wrap:wrap}
+    button{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:#081225;box-shadow:0 6px 18px rgba(106,161,255,.35)}
+    button.secondary{background:rgba(255,255,255,.08);color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,.12)}
+    button.ghost{background:transparent;color:var(--text);border:1px dashed rgba(255,255,255,.2)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:14px;border-radius:14px}
+    .explain{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:12px;margin-top:8px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    a.link{color:#a2c4ff}
+    .start{display:grid;gap:16px}
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    label.switch{display:inline-flex;align-items:center;gap:8px}
+    input[type="checkbox"]{accent-color:var(--accent)}
+    .footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px}
+    .kbd{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:1px 6px;border-radius:6px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">CBTテスト（スマホ対応）</div>
+      <div class="chip" id="chipinfo" aria-label="info"><span aria-hidden="true">📝</span><span>各章バランス抽出</span></div>
+    </header>
+
+    <div class="panel" aria-live="polite">
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+      <div class="muted" id="meta" style="margin:10px 0 16px"></div>
+      <div id="screen"></div>
+    </div>
+
+    <div class="footer">
+      <div class="muted">ショートカット: <span class="kbd">1-4</span> 選択 / <span class="kbd">Enter</span> 次へ</div>
+      <div class="muted">進捗はローカル保存。Backspaceでページ戻りは無効。</div>
+    </div>
+  </div>
+
+<script>
+"use strict";
+/********************
+ * 設定
+ ********************/
+const CONFIG = {
+  title: "第3/4/6章 CBT（合計可変・各章バランス）",
+  sampleSize: 50,
+  shuffleQuestions: true,
+  shuffleOptions: true,
+  allowReviewBeforeSubmit: true,
+  showExplanationAfterSubmit: true,
+  persistKey: "cbt-v2-state",
+  masteredKey: "cbt-v2-mastered"
+};
+
+/********************
+ * 問題バンク（115問: 第3章15 + 第4章50 + 第6章50）
+ ********************/
+function makeQ(chapter, number, stem, options, correctIndex, explanation){
+  return { id: `ch${chapter}-${number}`, chapter, number, stem, options, correctIndex, explanation };
+}
+
+const BANK = [
+  // ===== 第3章（Q1-15：システムとデジタル化） =====
+  makeQ(3,1,'時間や温度のように連続して変化する量を、時計の針の位置や水銀柱の長さのように連続した量で表現することを何と呼ぶか', ['デジタル','アナログ','符号化','量子化'], 1,'連続量を連続量で表現するのがアナログ。'),
+  makeQ(3,2,'連続して変化する量を、一定の間隔で区切った数字や、段階的な数値で表現する方法を何と呼ぶか', ['アナログ','デジタル','標本化','可逆圧縮'], 1,'離散的な表現がデジタル。'),
+  makeQ(3,3,'情報をデジタル化するメリットとして正しいものはどれか', ['情報が連続的な量で表現されるため、そのままの形で保存できる。','データが数値化されないため、加工が難しい。','情報を元通りに再現することが可能である。','修正や編集などの加工が困難になる。'], 2,'劣化の少ない複製や正確な再現が可能。'),
+  makeQ(3,4,'データの意味を保ったままデータ量を小さくする処理のうち、圧縮前と展開後のデータが完全に同じになる方式を何と呼ぶか', ['非可逆圧縮','標本化','可逆圧縮','量子化'], 2,'可逆圧縮は完全一致で復元可能。'),
+  makeQ(3,5,'0と1の2つの状態しかもたない情報量の最小単位であり、2進数の1桁に相当するものは何か', ['バイト','ワード','ビット','2進法'], 2,'bitは情報量の最小単位。'),
+  makeQ(3,6,'8ビットをまとめて何と呼ぶか', ['キロビット','16進数','バイト','2進法'], 2,'8ビット=1バイト。'),
+  makeQ(3,7,'コンピュータがすべての計算を行うために使用する基本的な論理回路の組み合わせとして正しいものはどれか', ['AND回路、OR回路、NAND回路','NOT回路、NOR回路、XOR回路','論理積(AND)回路、論理和(OR)回路、否定(NOT)回路','半加算回路、全加算回路、否定回路'], 2,'AND/OR/NOTで任意の論理を構成できる。'),
+  makeQ(3,8,'論理積(AND)回路の機能として正しいものはどれか', ['入力した信号を反転した値を出力する回路','入力のいずれか一方が1であれば、1を出力する回路','2つの入力がともに1の時だけ、出力信号が1になる回路','2つの入力が異なるときに1を出力する回路'], 2,'ANDは両方1で1。'),
+  makeQ(3,9,'2進数で数値を表現すると桁数が多くなるため、より短く表現するために使用されることが多く、0〜9とA〜Fの英字を使用する数の表現方法はどれか', ['8進数','10進数','16進数','32進数'], 2,'0〜9とA〜Fで表現する。'),
+  makeQ(3,10,'文字や記号を、2進数でどのように表すか取り決めたものを何と呼ぶか', ['制御コード','文字コード','補数','符号化'], 1,'例: ASCII, UTF-8。'),
+  makeQ(3,11,'1バイトの文字コードで表現できる文字の種類数は最大で何種類か', ['64種類','128種類','256種類','65536種類'], 2,'2^8=256。'),
+  makeQ(3,12,'音声をデジタル化する過程で、アナログの電気信号の波を一定の時間間隔に分割し、量として取り出す処理を何と呼ぶか', ['量子化','標本化（サンプリング）','符号化','圧縮'], 1,'時間方向に間引く処理。'),
+  makeQ(3,13,'音声をデジタル化する過程で、信号レベルを何段階で表現するかを定めて、標本化したデータをその段階数に当てはめて整数値に置き換える処理を何と呼ぶか', ['標本化','符号化','量子化','減法混色'], 2,'振幅方向の離散化。'),
+  makeQ(3,14,'テレビやコンピュータのディスプレイで用いられる色の表現方法で、赤(R)、緑(G)、青(B)の三色を混ぜると明るさが増し、何色に近づくか', ['黒','シアン','マゼンタ','白'], 3,'加法混色は白に近づく。'),
+  makeQ(3,15,'画像を構成する最小の単位を何と呼ぶか', ['ドット','階調','画素（ピクセル）','フレーム'], 2,'pixel(画素)。'),
+
+  // ===== 第4章（Q16-65 の50問） =====
+  makeQ(4,16,'学校や会社などの限られた範囲のネットワークはどれか。',['WAN','LAN','インターネット','DMZ'],1,'限定範囲のネットワークはLAN。'),
+  makeQ(4,17,'LANどうしを広域で結ぶネットワークはどれか。',['LAN','WAN','インターネット','プロトコル'],1,'広域はWAN。'),
+  makeQ(4,18,'クライアントの要求に応じてサービスを提供する要素はどれか。',['ルータ','サーバ','プロトコル','ブラウザ'],1,'提供側はサーバ。'),
+  makeQ(4,19,'情報伝達の約束ごとはどれか。',['TCP/IP','IPアドレス','プロトコル','ルーティング'],2,'通信規約=プロトコル。'),
+  makeQ(4,20,'インターネットの中心的プロトコル群はどれか。',['HTTP','POP','SMTP','TCP/IP'],3,'TCPとIPを中心とする。'),
+  makeQ(4,21,'TCPの主な役割はどれか。',['経路決定','物理層規定','データの正確性保証','アプリ層やり取り'],2,'再送・順序制御等で信頼性を担保。'),
+  makeQ(4,22,'IPの主な役割はどれか。',['信頼性通信','ルーティングと転送','Web閲覧','メール送信'],1,'IPアドレスに基づく転送。'),
+  makeQ(4,23,'インターネット上の個別の番号はどれか。',['ドメイン名','IPアドレス','MACアドレス','ルーティングテーブル'],1,'識別番号はIPアドレス。'),
+  makeQ(4,24,'IPv4の表現として正しいのはどれか。',['64bit・16進','32bit・8bit毎にドット区切りの10進×4','128bit・16進×8','48bit・16進×6'],1,'例: 192.168.0.1'),
+  makeQ(4,25,'重複しない公的なIPアドレスはどれか。',['プライベートIP','ドメイン名','グローバルIP','ゲートウェイ'],2,'インターネット上で一意。'),
+  makeQ(4,26,'LAN内で用いるアドレスはどれか。',['グローバルIP','プライベートIP','DNSアドレス','MACアドレス'],1,'内部用はプライベート。'),
+  makeQ(4,27,'IPを分かりやすい名前にしたものはどれか。',['URL','IPアドレス','ドメイン名','ルーティングテーブル'],2,'例: example.com'),
+  makeQ(4,28,'ドメインとIPを相互変換するサーバはどれか。',['Webサーバ','メールサーバ','DNSサーバ','ルータ'],2,'名前解決を担当。'),
+  makeQ(4,29,'最適な転送経路を選ぶ仕組みはどれか。',['パケット交換','トラフィック制御','ルーティング','クライアントサーバ'],2,'経路選択=ルーティング。'),
+  makeQ(4,30,'WWWで使うプロトコルはどれか。',['SMTP','POP','TCP','HTTP'],3,'Web閲覧=HTTP。'),
+  makeQ(4,31,'Webページの記述言語はどれか。',['JavaScript','Python','C言語','HTML'],3,'文書構造はHTML。'),
+  makeQ(4,32,'Webの場所指定に使うものはどれか。',['IPアドレス','ドメイン名','URL','Webサーバ'],2,'例: https://...'),
+  makeQ(4,33,'メールアドレスの一般書式はどれか。',['ドメイン/ユーザ','ユーザ@ドメイン','IP:ポート','ユーザ.ドメイン'],1,'user@example.com'),
+  makeQ(4,34,'メール送信で使うプロトコルはどれか。',['POP','IMAP','HTTP','SMTP'],3,'送信=SMTP。'),
+  makeQ(4,35,'通信速度の単位はどれか。',['Hz','MB/s','fps','bps'],3,'bits per second。'),
+  makeQ(4,36,'速度単位の1k(十進)はどれか。',['1024','100','1000','10^6'],2,'通信分野ではk=1000が多い。'),
+  makeQ(4,37,'情報セキュリティ三要素に含まれないのはどれか。',['機密性','完全性','迅速性','可用性'],2,'CIAのC,I,A。'),
+  makeQ(4,38,'許可者のみアクセスできる状態はどれか。',['完全性','可用性','機密性','認証'],2,'Confidentiality。'),
+  makeQ(4,39,'改ざん・破壊がない状態はどれか。',['機密性','可用性','完全性','認証'],2,'Integrity。'),
+  makeQ(4,40,'必要時に中断なくアクセス可能な状態はどれか。',['機密性','完全性','可用性','認証'],2,'Availability。'),
+  makeQ(4,41,'当人が正規利用者であると確認する行為はどれか。',['ユーザID','パスワード','認証','アクセス制御'],2,'本人確認=認証。'),
+  makeQ(4,42,'人為的手段で機密情報を入手する行為はどれか。',['不正アクセス','フィッシング','ランサムウェア','ソーシャルエンジニアリング'],3,'肩越し覗き等。'),
+  makeQ(4,43,'情報を勝手に外部送信するマルウェアはどれか。',['アドウェア','ランサムウェア','スパイウェア','ワーム'],2,'スパイ活動。'),
+  makeQ(4,44,'意図しない広告を表示するマルウェアはどれか。',['アドウェア','スパイウェア','ランサムウェア','トロイの木馬'],0,'広告配信目的。'),
+  makeQ(4,45,'暗号化し身代金を要求するマルウェアはどれか。',['スパイウェア','アドウェア','ランサムウェア','ウイルス'],2,'Ransom(身代金)。'),
+  makeQ(4,46,'外部からの不正アクセスを防ぐ装置/ソフトはどれか。',['ルータ','DNSサーバ','ファイアウォール','DMZ'],2,'境界で通信制御。'),
+  makeQ(4,47,'組織の情報セキュリティ方針・行動指針はどれか。',['アクセス制御','フィルタリング','情報セキュリティポリシー','認証'],2,'全構成員対象の基本方針。'),
+  makeQ(4,48,'誰がどの権限でアクセスできるかを制御する技術はどれか。',['フィルタリング','アクセス制御','暗号化','デジタル署名'],1,'Access Control。'),
+  makeQ(4,49,'内容に問題があれば通信を遮断する技術はどれか。',['アクセス制御','VLAN','フィルタリング','暗号化'],2,'URL/パケット等の検査。'),
+  makeQ(4,50,'物理に依存せず仮想的にLAN分割する技術はどれか。',['WAN','DMZ','LAN','VLAN'],3,'Virtual LAN。'),
+  makeQ(4,51,'暗号化前の文はどれか。',['暗号文','平文','鍵','復号'],1,'Plaintext。'),
+  makeQ(4,52,'暗号文を平文に戻す操作はどれか。',['暗号化','符号化','復号','圧縮'],2,'Decryption。'),
+  makeQ(4,53,'同じ鍵で暗号/復号する方式はどれか。',['公開鍵暗号','共通鍵暗号','セッション鍵方式','デジタル署名'],1,'対称鍵暗号。'),
+  makeQ(4,54,'公開鍵で暗号化し秘密鍵で復号する方式はどれか。',['共通鍵暗号','セッション鍵方式','公開鍵暗号','シーザー暗号'],2,'非対称鍵暗号。'),
+  makeQ(4,55,'共通鍵と公開鍵を組み合わせる方式はどれか。',['DES','RSA','セッション鍵方式','SSL/TLS'],2,'鍵配送に公開鍵、本文に共通鍵。'),
+  makeQ(4,56,'本人性を証明する技術はどれか。',['暗号化','復号','デジタル署名','電子すかし'],2,'署名で改ざん検知と本人性。'),
+  makeQ(4,57,'公開鍵の持ち主を証明する電子データはどれか。',['デジタル署名','秘密鍵','電子証明書','認証局'],2,'証明書に公開鍵と主体情報。'),
+  makeQ(4,58,'httpsで使う暗号化プロトコルはどれか。',['HTTP','FTP','SSL/TLS','SMTP'],2,'TLSが現行。'),
+  makeQ(4,59,'画像に著作者名などの情報を埋める技術はどれか。',['デジタル署名','暗号化','パリティビット','電子すかし'],3,'透かしで権利保護。'),
+  makeQ(4,60,'誤り検出のためパケットに加えるデータはどれか。',['制御コード','誤り検出符号','復号鍵','フィルタ情報'],1,'CRCやチェックサム等。'),
+  makeQ(4,61,'1ビット付加し1の個数を偶奇で調整するビットはどれか。',['符号ビット','セッションビット','パリティビット','制御ビット'],2,'偶数/奇数パリティ。'),
+  makeQ(4,62,'回線を占有せず小ブロックで転送する方式はどれか。',['回線交換','パケット交換','ストリーミング','ブロードキャスト'],1,'IP網の基本方式。'),
+  makeQ(4,63,'アプリケーション層のプロトコルはどれか。',['TCP','IP','イーサネット','HTTP'],3,'HTTPはアプリ層。'),
+  makeQ(4,64,'トランスポート層の主な役割はどれか。',['データを目的地に運ぶ','物理層規定','通信ソフトとのやり取り','信頼性の高い通信'],3,'TCPによる信頼性提供など。'),
+  makeQ(4,65,'IPv4の10進表現で1ブロックの範囲はどれか。',['1〜254','0〜254','0〜255','1〜255'],2,'0〜255の256値。'),
+
+  // ===== 第6章（Q116-165 の50問） =====
+  makeQ(6,116,'計算や情報処理の手順を定式化したものはどれか。',['プログラム','フローチャート','アルゴリズム','制御構造'],2,'手順そのものがアルゴリズム。'),
+  makeQ(6,117,'アルゴリズムにおける定式化とは何か。',['高速実行','言語で記述','決まった形で表現','図で表現'],2,'式や言葉で厳密に表すこと。'),
+  makeQ(6,118,'アルゴリズムをコンピュータが実行できるよう記述したものはどれか。',['アルゴリズム','フローチャート','定式化','プログラム'],3,'実行可能な形がプログラム。'),
+  makeQ(6,119,'コンピュータのプログラム実行能力の説明はどれか。',['誤り手順を自動修正','自律的に追加処理','記述通り高速に実行','常に人より効率的'],2,'命令通り高速に処理する。'),
+  makeQ(6,120,'処理の流れを表す図はどれか。',['状態遷移図','フローチャート','論理回路図','真理値表'],1,'フローチャートで表現。'),
+  makeQ(6,121,'機器などの状態の移り変わりを表す図はどれか。',['アクティビティ図','フローチャート','状態遷移図','順次構造'],2,'State machine。'),
+  makeQ(6,122,'各処理が直線的につながる制御構造はどれか。',['選択構造','反復構造','順次構造','分岐構造'],2,'順に実行。'),
+  makeQ(6,123,'条件によって処理が分かれる制御構造はどれか。',['順次構造','選択構造','反復構造','手続き型'],1,'ifなど。'),
+  makeQ(6,124,'条件が真の間繰り返す制御構造はどれか。',['順次構造','選択構造','反復構造','手続き型'],2,'whileやforで表現。'),
+  makeQ(6,125,'プログラミング手順の最初のステップはどれか。',['コーディング','テスト','設計','実行'],2,'設計→コーディング→テスト。'),
+  makeQ(6,126,'設計の次に行うステップはどれか。',['テスト','設計','コーディング','実行'],2,'設計後にコーディング。'),
+  makeQ(6,127,'手順を順番に記述する考え方はどれか。',['オブジェクト指向','関数型','手続き型','スクリプト言語'],2,'命令列で記述。'),
+  makeQ(6,128,'データと処理をまとめて記述する考え方はどれか。',['手続き型','オブジェクト指向','関数型','コンパイラ言語'],1,'クラス/オブジェクトで表現。'),
+  makeQ(6,129,'関数の集まりとして記述する考え方はどれか。',['手続き型','オブジェクト指向','関数型','低水準言語'],2,'副作用の少ない関数中心。'),
+  makeQ(6,130,'メモリ上のデータを格納する領域はどれか。',['変数名','配列','変数','関数'],2,'値を保持する箱が変数。'),
+  makeQ(6,131,'格納領域に付けた名前はどれか。',['変数','変数名','型','添字'],1,'識別子=変数名。'),
+  makeQ(6,132,'if文が主に用いられる制御構造はどれか。',['順次','選択','反復','関数定義'],1,'条件分岐に使用。'),
+  makeQ(6,133,'for/whileが主に用いられる制御構造はどれか。',['順次','選択','反復','関数定義'],2,'繰り返し。'),
+  makeQ(6,134,'Pythonのrange(初期値, 終了値)はどこまで繰り返すか。',['終了値まで','終了値の直前まで','初期値まで','増分0まで'],1,'上限は含まない。'),
+  makeQ(6,135,'while文が繰り返す条件はどれか。',['条件が真の間','終了値まで','回数が決まっている場合のみ','一度実行まで'],0,'条件式がtrueの間。'),
+  makeQ(6,136,'同型の変数を集め一つの名前を付けたものはどれか。',['変数','リスト','関数','配列'],3,'配列/リスト。'),
+  makeQ(6,137,'配列を構成する一つひとつはどれか。',['添字','変数名','要素','領域'],2,'各要素(element)。'),
+  makeQ(6,138,'配列の要素番号はどれか。',['変数名','要素','値','添字'],3,'index/添字。'),
+  makeQ(6,139,'引数を受け処理し結果を返すまとまりはどれか。',['変数','配列','アルゴリズム','関数'],3,'関数(function)。'),
+  makeQ(6,140,'関数が受け取る値はどれか。',['戻り値','引数','ローカル変数','グローバル変数'],1,'parameter/argument。'),
+  makeQ(6,141,'関数が返す結果の値はどれか。',['引数','戻り値','変数','ローカル変数'],1,'return value。'),
+  makeQ(6,142,'他から参照できない変数はどれか。',['グローバル','ローカル','配列','添字'],1,'スコープは関数内。'),
+  makeQ(6,143,'どこからでも参照できる変数はどれか。',['ローカル','グローバル','引数','戻り値'],1,'モジュール全体に可視。'),
+  makeQ(6,144,'大量データから目的を探すことはどれか。',['整列','探索','ソート','ルーティング'],1,'search。'),
+  makeQ(6,145,'最初から順に見ていく探索はどれか。',['二分探索','バブルソート','線形探索','ハッシュ探索'],2,'linear search。'),
+  makeQ(6,146,'二分探索の前提条件はどれか。',['ランダム配置','二次元配列','整列済み','データ量が少ない'],2,'昇順等で並んでいる必要。'),
+  makeQ(6,147,'二分探索の基本手順はどれか。',['順に全探索','隣接比較で入替','3分割比較','半分に分けて含む側を再探索'],3,'middleと比較して範囲を絞る。'),
+  makeQ(6,148,'基準に基づき並べ替えることはどれか。',['探索','ルーティング','整列(ソート)','圧縮'],2,'sort。'),
+  makeQ(6,149,'例示されている整列アルゴリズムはどれか。',['クイック','マージ','バブル','選択'],2,'隣接交換のバブルソート。'),
+  makeQ(6,150,'優れたアルゴリズムの基準はどれか。',['コードが短い','制御が複雑','計算量が少ない','手続きが多い'],2,'一般に計算量(O)が小さい。'),
+  makeQ(6,151,'コンピュータが直接理解できるプログラムは何で記されるか。',['英数字','10進数','0と1','記号'],2,'機械語はビット列。'),
+  makeQ(6,152,'機械語を英数字に置換した段階はどれか。',['高水準言語','機械語を英数字に置き換えたもの','関数型言語','オブジェクト指向言語'],1,'アセンブリ言語に相当。'),
+  makeQ(6,153,'実行前にまとめて翻訳が必要な言語はどれか。',['スクリプト言語','JavaScript','コンパイラ言語','Python'],2,'C/Java等はコンパイル必要。'),
+  makeQ(6,154,'主にブラウザ上で動く言語はどれか。',['Python','C言語','Java','JavaScript'],3,'Webで最も普及。'),
+  makeQ(6,155,'多くのライブラリが付属しAIにも使われるスクリプト言語はどれか。',['JavaScript','Python','C言語','Java'],1,'Python。'),
+  makeQ(6,156,'手続き型のコンパイラ言語で広く利用されるのはどれか。',['Python','Java','C言語','Haskell'],2,'C言語。'),
+  makeQ(6,157,'Java仮想マシン上で動作する言語はどれか。',['C言語','Python','Java','JavaScript'],2,'JVMで動作。'),
+  makeQ(6,158,'関数型言語の例はどれか。',['Java','C','Python','Haskell'],3,'Haskell等。'),
+  makeQ(6,159,'変数の目的に合わせて選択するものはどれか。',['添字','戻り値','引数','型'],3,'型(type)の選択が重要。'),
+  makeQ(6,160,'Pythonの選択構造の制御文はどれか。',['for','while','if','range'],2,'if文。'),
+  makeQ(6,161,'if条件不成立時に実行されるのはどれか。',['if','else if','else','while'],2,'else節に記述。'),
+  makeQ(6,162,'回数未定の繰り返しで推奨されるのはどれか。',['if','for','while','range'],2,'条件で繰り返すwhile。'),
+  makeQ(6,163,'配列で特定要素を識別するものはどれか。',['変数名と型','要素と値','配列名と添字','要素名と引数'],2,'name[index]。'),
+  makeQ(6,164,'自販機を関数とみなしたときの引数はどれか。',['在庫','内部構造','投入硬貨や選択ボタン','釣り銭'],2,'入力に相当。'),
+  makeQ(6,165,'Pythonで関数はどこに記述する必要があるか。',['後','前','別ファイル','どこでもよい'],1,'呼び出しより前に定義が評価される必要がある。')
+];
+
+/********************
+ * ユーティリティ
+ ********************/
+const $ = (sel)=>document.querySelector(sel);
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+function groupByChapter(items){ return items.reduce((acc,qq)=>{ (acc[qq.chapter] = acc[qq.chapter] || []).push(qq); return acc; },{}); }
+function sampleWithoutReplacement(arr, n){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a.slice(0, Math.min(n, a.length));
+}
+function getMastered(){ try{ return new Set(JSON.parse(localStorage.getItem(CONFIG.masteredKey)||"[]")); }catch(_){ return new Set(); } }
+function setMastered(set){ try{ localStorage.setItem(CONFIG.masteredKey, JSON.stringify(Array.from(set))); }catch(_){ /* noop */ } }
+
+/** 可変出題数 **/
+function getSampleSize(){ return (state && state.settings && state.settings.sampleSize) ? state.settings.sampleSize : CONFIG.sampleSize; }
+function titleText(){ return `第3/4/6章 CBT（合計${getSampleSize()}問・各章バランス）`; }
+function updateMetaLabels(){
+  const n = getSampleSize();
+  const chip = document.getElementById("chipinfo");
+  if(chip){
+    const spans = chip.querySelectorAll("span");
+    if(spans.length>=2){ spans[1].textContent = `各章バランス抽出 / ${n}問`; }
+    else { chip.textContent = `各章バランス抽出 / ${n}問`; }
+  }
+  document.title = `CBTテスト | 第3/4/6章からバランス抽出（${n}問）`;
+}
+
+// 出題配分（各章の問題数比に応じて割当。端数は小数部の大きい順→ラウンドロビン）
+function computeBalancedQuotas(poolByChapter, total){
+  const chapters = Object.keys(poolByChapter).map(Number).filter(Number.isFinite);
+  if(total<=0 || chapters.length===0){ return {}; }
+  const counts = chapters.map(ch=> (poolByChapter[ch] ? poolByChapter[ch].length : 0));
+  const sum = counts.reduce((a,b)=>a+b,0);
+  if(sum===0){ // すべて空でも均等割
+    const base = Math.floor(total/chapters.length);
+    const quotas = Object.fromEntries(chapters.map(ch=>[ch, base]));
+    let remain = total - base*chapters.length;
+    let i=0; while(remain>0){ quotas[chapters[i%chapters.length]]++; remain--; i++; }
+    return quotas;
+  }
+  const wants = chapters.map((ch,i)=>({ ch, want: counts[i]/sum*total }));
+  const quotas = Object.fromEntries(wants.map(x=>[x.ch, Math.floor(x.want)]));
+  let used = Object.values(quotas).reduce((a,b)=>a+b,0);
+  const order = wants.map(x=>({ ch:x.ch, frac: x.want-Math.floor(x.want) }))
+                     .sort((a,b)=>b.frac-a.frac)
+                     .map(x=>x.ch);
+  let i=0; while(used<total){ const ch=order[i%order.length]; quotas[ch]++; used++; i++; }
+  return quotas;
+}
+
+/********************
+ * 状態
+ ********************/
+let state = {
+  order: [],              // 表示順のid配列
+  answers: {},            // id -> choiceIndex
+  current: 0,
+  submitted: false,
+  score: 0,
+  settings: { excludeMastered: false, sampleSize: CONFIG.sampleSize },
+  sampledInfo: { quotas: {}, size: 0 }
+};
+
+function load(){ try{ const raw=localStorage.getItem(CONFIG.persistKey); return raw?JSON.parse(raw):null; }catch(_){ return null; } }
+function save(){ try{ localStorage.setItem(CONFIG.persistKey, JSON.stringify(state)); }catch(_){ /* noop */ } }
+
+/********************
+ * 初期表示（スタート画面）
+ ********************/
+function renderStart(){
+  $("#meta").textContent = titleText();
+  $("#progress").style.width = "0%";
+  const s = document.createElement("div"); s.className = "start";
+
+  const byCh = groupByChapter(BANK);
+  const stats = document.createElement("div"); stats.className = "grid";
+  Object.keys(byCh).map(Number).sort((a,b)=>a-b).forEach(ch=>{
+    const d = document.createElement("div"); d.className = "stat";
+    d.innerHTML = `<div class="muted">第${ch}章の問題数</div><div style="font-size:20px;font-weight:700">${byCh[ch].length} 問</div>`;
+    stats.appendChild(d);
+  });
+
+  // 出題数ラジオ（20/30/40/50）
+  const sizes = [20,30,40,50];
+  const sizeRow = document.createElement("div"); sizeRow.className='row';
+  const sizeLabel = document.createElement("div"); sizeLabel.className='muted'; sizeLabel.textContent='1回の出題数:'; sizeRow.appendChild(sizeLabel);
+  const currentSize = getSampleSize();
+  let startBtn = null;
+  sizes.forEach(n=>{
+    const id = `size-${n}`;
+    const input = document.createElement('input'); input.type='radio'; input.name='samplesize'; input.id=id; input.value=String(n); input.className='sr-only';
+    if(currentSize===n) input.checked = true;
+    const label = document.createElement('label'); label.className='chip'; label.setAttribute('for', id); label.textContent=`${n}問`;
+    input.addEventListener('change',()=>{
+      state.settings.sampleSize = n; save(); updateMetaLabels(); if(startBtn){ startBtn.textContent = `テスト開始（${getSampleSize()}問を抽出）`; }
+    });
+    sizeRow.appendChild(input); sizeRow.appendChild(label);
+  });
+
+  // 正解済みを除外トグル
+  const settings = document.createElement('div'); settings.className='row';
+  const chk = document.createElement('input'); chk.type='checkbox'; chk.id='excl'; chk.checked = state.settings.excludeMastered;
+  chk.addEventListener('change',()=>{ state.settings.excludeMastered = chk.checked; save(); });
+  const lbl = document.createElement('label'); lbl.className='switch'; lbl.htmlFor='excl'; lbl.innerHTML = '<strong>前回までに正解した問題を除外する</strong>';
+
+  const note = document.createElement('div'); note.className='muted';
+  const mastered = getMastered(); note.textContent = `保存済みの正解済み: ${mastered.size} 問`;
+
+  const btns = document.createElement('div'); btns.className='row';
+  startBtn = document.createElement('button'); startBtn.textContent=`テスト開始（${getSampleSize()}問を抽出）`;
+  startBtn.addEventListener('click', startNewExam);
+  const clearBtn = document.createElement('button'); clearBtn.textContent='正解済みリセット'; clearBtn.className='ghost';
+  clearBtn.addEventListener('click',()=>{ setMastered(new Set()); renderStart(); });
+
+  btns.appendChild(startBtn); btns.appendChild(clearBtn);
+
+  s.appendChild(stats);
+  s.appendChild(sizeRow);
+  const row = document.createElement('div'); row.className='row'; row.appendChild(chk); row.appendChild(lbl); s.appendChild(row);
+  s.appendChild(note);
+  s.appendChild(btns);
+
+  const screen = $('#screen'); screen.innerHTML=''; screen.appendChild(s);
+  updateMetaLabels();
+}
+
+function startNewExam(){
+  const mastered = getMastered();
+  // マスター済み除外
+  let pool = state.settings.excludeMastered ? BANK.filter(qq=>!mastered.has(qq.id)) : BANK.slice();
+  if(pool.length===0){ pool = BANK.slice(); }
+  const N = getSampleSize();
+  const byCh = groupByChapter(pool);
+  const quotas = computeBalancedQuotas(byCh, N);
+  const selected = [];
+  Object.keys(byCh).map(Number).sort((a,b)=>a-b).forEach(ch=>{
+    const take = Math.min(quotas[ch]||0, byCh[ch].length);
+    const picked = sampleWithoutReplacement(byCh[ch], take);
+    selected.push(...picked);
+  });
+  const remaining = pool.filter(q=>selected.indexOf(q)===-1);
+  let need = N - selected.length;
+  if(need>0){ selected.push(...sampleWithoutReplacement(remaining, need)); }
+
+  const ids = selected.map(q=>q.id);
+  state.order = CONFIG.shuffleQuestions ? shuffle(ids) : ids;
+  state.answers={}; state.current=0; state.submitted=false; state.score=0; state.sampledInfo={ quotas, size: state.order.length };
+  save(); render();
+}
+
+/********************
+ * 画面レンダリング
+ ********************/
+function render(){
+  if(!state.order.length && !state.submitted){ renderStart(); return; }
+  const total = state.order.length;
+  const idx = clamp(state.current,0,Math.max(0,total-1)); state.current = idx;
+  if(state.submitted){ $('#meta').textContent = '結果'; $('#progress').style.width = '100%'; const screen=$('#screen'); screen.innerHTML=''; screen.appendChild(renderResult()); return; }
+  const q = getQuestionByOrder(idx);
+  $('#meta').textContent = `${titleText()} — 問題 ${idx+1} / ${total}`;
+  updateMetaLabels();
+  $('#progress').style.width = `${(total<=1?0:(idx/(total-1)))*100}%`;
+
+  const screen = $('#screen'); screen.innerHTML='';
+  const card = document.createElement('div'); card.className='question-card';
+  const fs = document.createElement('fieldset'); fs.setAttribute('role','group');
+  const lg = document.createElement('legend'); lg.textContent = formatStem(q); fs.appendChild(lg);
+
+  const optsWrap = document.createElement('div'); optsWrap.className='opts';
+  let opts = q.options.map((text,i)=>({text,i}));
+  const saved = state.answers[q.id];
+  if(CONFIG.shuffleOptions && saved==null){ opts = shuffle(opts); }
+  opts.forEach(({text,i}, visibleIndex)=>{
+    const id = `opt-${q.id}-${visibleIndex}`;
+    const label = document.createElement('label'); label.className='opt'; label.setAttribute('for',id);
+    const input = document.createElement('input'); input.type='radio'; input.name=`q-${q.id}`; input.id=id; input.value=String(i);
+    if(saved!==undefined && saved===i){ input.checked = true; }
+    input.addEventListener('change',()=>{ state.answers[q.id]=Number(input.value); save(); });
+    const txt = document.createElement('span'); txt.textContent = text;
+    label.appendChild(input); label.appendChild(txt); optsWrap.appendChild(label);
+  });
+  fs.appendChild(optsWrap);
+  card.appendChild(fs);
+
+  const nav = document.createElement('div'); nav.className='nav';
+  const back = document.createElement('button'); back.textContent='← 戻る'; back.className='secondary';
+  back.disabled = state.current===0 || !CONFIG.allowReviewBeforeSubmit;
+  back.addEventListener('click',()=>{ state.current = clamp(state.current-1,0,total-1); save(); render(); });
+  const next = document.createElement('button'); next.textContent = (state.current===total-1)?'解答を送信':'次へ →';
+  next.addEventListener('click',()=>{ if(state.current===total-1){ submitAnswers(); } else { state.current = clamp(state.current+1,0,total-1); save(); render(); } });
+  nav.appendChild(back); nav.appendChild(next); card.appendChild(nav);
+  screen.appendChild(card);
+}
+
+function renderResult(){
+  const wrap = document.createElement('div'); wrap.className='result';
+  const h = document.createElement('h2'); h.textContent='結果'; wrap.appendChild(h);
+
+  const total = state.order.length; const percent = Math.round((state.score/total)*100);
+  const stats = document.createElement('div'); stats.className='grid';
+  stats.appendChild(stat('得点', `${state.score} / ${total}（${percent}%）`));
+  const quotas = state.sampledInfo.quotas || {}; const byCh = groupByChapter(state.order.map(id=>BANK.find(q=>q.id===id)));
+  const dist = document.createElement('div'); dist.className='stat';
+  const ul = document.createElement('ul'); ul.className='muted';
+  Object.keys(byCh).map(Number).sort((a,b)=>a-b).forEach(ch=>{
+    const count = byCh[ch].length; const want = quotas[ch]||count;
+    const li = document.createElement('li'); li.textContent = `第${ch}章: ${count}問（目安${want}）`;
+    ul.appendChild(li);
+  });
+  const ttl = document.createElement('div'); ttl.style.fontWeight='700'; ttl.textContent='出題内訳';
+  dist.appendChild(ttl); dist.appendChild(ul); stats.appendChild(dist);
+  wrap.appendChild(stats);
+
+  if(CONFIG.showExplanationAfterSubmit){
+    const reviewOk = document.createElement('div'); reviewOk.className='panel';
+    const titleOk = document.createElement('div'); titleOk.style.fontWeight='700'; titleOk.style.marginBottom='8px'; titleOk.textContent='解説レビュー（正解のみ）';
+    reviewOk.appendChild(titleOk);
+
+    let anyOk=false; const wrongBlocks=[];
+    state.order.forEach((id)=>{
+      const q = BANK.find(x=>x.id===id); const your = state.answers[id]; const correct = (your===q.correctIndex);
+      if(correct){
+        const block = document.createElement('div'); block.className='explain correct';
+        block.innerHTML = `<div><strong>Q${q.number}</strong> ${escapeHtml(q.stem)}</div>`+
+                          `<div class="muted">あなたの解答: ${escapeHtml(q.options[your])}</div>`+
+                          `<div>正解: ${escapeHtml(q.options[q.correctIndex])}</div>`+
+                          (q.explanation?`<div class="muted">${escapeHtml(q.explanation)}</div>`:'');
+        reviewOk.appendChild(block); anyOk=true;
+      } else { wrongBlocks.push(q); }
+    });
+    if(!anyOk){ const none=document.createElement('div'); none.className='muted'; none.textContent='正解した問題の解説はありません。'; reviewOk.appendChild(none); }
+    wrap.appendChild(reviewOk);
+
+    const reviewNg = document.createElement('div'); reviewNg.className='panel';
+    const titleNg = document.createElement('div'); titleNg.style.fontWeight='700'; titleNg.style.marginBottom='8px'; titleNg.textContent='不正解の問題（番号と問題文のみ）'; reviewNg.appendChild(titleNg);
+    if(wrongBlocks.length===0){ const ok=document.createElement('div'); ok.className='muted'; ok.textContent='不正解はありません。'; reviewNg.appendChild(ok); }
+    wrongBlocks.forEach(q=>{ const b=document.createElement('div'); b.className='explain'; b.innerHTML = `<div><strong>Q${q.number}</strong> ${escapeHtml(q.stem)}</div>`; reviewNg.appendChild(b); });
+    wrap.appendChild(reviewNg);
+
+    const actions = document.createElement('div'); actions.className='nav';
+    const retryWrong = document.createElement('button'); retryWrong.textContent='間違えた問題だけリトライ';
+    retryWrong.addEventListener('click', retryIncorrectOnly);
+    const retryAll = document.createElement('button'); retryAll.textContent=`${getSampleSize()}問で新しく受ける（章バランス再抽出）`;
+    retryAll.addEventListener('click', startNewExam);
+
+    const toggle = document.createElement('label'); toggle.className='switch';
+    const ck=document.createElement('input'); ck.type='checkbox'; ck.checked=state.settings.excludeMastered; ck.addEventListener('change',()=>{ state.settings.excludeMastered=ck.checked; save();});
+    const sp=document.createElement('span'); sp.textContent='次回から正解済みを除外'; toggle.appendChild(ck); toggle.appendChild(sp);
+
+    const exportBtn = document.createElement('button'); exportBtn.textContent='結果をJSON保存'; exportBtn.className='secondary';
+    exportBtn.addEventListener('click',()=>{
+      const payload = { score: state.score, total: state.order.length, answers: state.answers, correctIds: state.order.filter(id=>state.answers[id]===BANK.find(q=>q.id===id).correctIndex), wrongIds: state.order.filter(id=>state.answers[id]!==BANK.find(q=>q.id===id).correctIndex) };
+      const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='result.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    actions.appendChild(retryWrong); actions.appendChild(retryAll); actions.appendChild(toggle); actions.appendChild(exportBtn);
+    wrap.appendChild(actions);
+  }
+  return wrap;
+}
+
+function stat(label, value){ const d=document.createElement('div'); d.className='stat'; d.innerHTML = `<div class="muted">${label}</div><div style="font-size:20px;font-weight:700">${value}</div>`; return d; }
+function formatStem(q){ return q.stem; }
+
+/********************
+ * 採点 & リトライ
+ ********************/
+function submitAnswers(){
+  const mastered = getMastered();
+  let score=0;
+  state.order.forEach(id=>{ const q=BANK.find(x=>x.id===id); const a=state.answers[id]; const ok = (a===q.correctIndex); if(ok){ score++; mastered.add(id);} });
+  setMastered(mastered);
+  state.score=score; state.submitted=true; save(); render();
+}
+function retryIncorrectOnly(){
+  const wrongIds = state.order.filter(id=>state.answers[id]!==BANK.find(q=>q.id===id).correctIndex);
+  if(wrongIds.length===0){ startNewExam(); return; }
+  state.order = shuffle(wrongIds.slice()); state.answers={}; state.current=0; state.submitted=false; state.score=0; state.sampledInfo={ quotas:{}, size: state.order.length };
+  save(); render();
+}
+
+/********************
+ * 入力（キーボード）
+ ********************/
+function setupKeys(){
+  window.addEventListener('keydown',(e)=>{
+    const tag = document.activeElement && document.activeElement.tagName;
+    if(e.key==='Backspace' && tag!=='INPUT' && tag!=='TEXTAREA' && tag!=='SELECT'){ e.preventDefault(); }
+    if(state.submitted) return;
+    const q = getQuestionByOrder(state.current); if(!q) return;
+    if(e.key>='1' && e.key<='4'){
+      const idx = Number(e.key)-1; const radios = document.querySelectorAll(`input[name="q-${q.id}"]`); if(radios[idx]){ radios[idx].checked=true; radios[idx].dispatchEvent(new Event('change')); }
+    }
+    if(e.key==='Enter'){
+      const total = state.order.length; if(state.current===total-1){ submitAnswers(); } else { state.current = clamp(state.current+1,0,total-1); save(); render(); }
+    }
+  });
+}
+
+function getQuestionByOrder(i){ const id=state.order[i]; return BANK.find(q=>q.id===id); }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+/********************
+ * 自己テスト（簡易）
+ ********************/
+function runSelfTests(){
+  try{
+    const sum = o=>Object.values(o).reduce((a,b)=>a+b,0);
+    // Quota配分の合計
+    const q0 = computeBalancedQuotas({3:new Array(15),4:new Array(50),6:new Array(50)}, 50); console.assert(sum(q0)===50, '[SelfTest] Quotas sum to 50');
+    // 章ごとの問題数
+    console.assert(BANK.filter(q=>q.chapter===3).length===15, '[SelfTest] 第3章は15問');
+    console.assert(BANK.filter(q=>q.chapter===4).length===50 && BANK.filter(q=>q.chapter===6).length===50, '[SelfTest] 第4/6章は50問ずつ');
+    // 空プール
+    const q1 = computeBalancedQuotas({}, 50); console.assert(Object.keys(q1).length===0, '[SelfTest] Empty pool yields empty quotas');
+    // 1章のみ
+    const q2 = computeBalancedQuotas({3:new Array(7)}, 10); console.assert(q2[3]===10, '[SelfTest] Single chapter gets all');
+    // 各問題の形式検査
+    const bad = BANK.filter(x=>!x || typeof x.correctIndex!=='number' || !Array.isArray(x.options) || x.options.length!==4 || x.correctIndex<0 || x.correctIndex>3);
+    console.assert(bad.length===0, '[SelfTest] All questions have 4 options and valid correctIndex');
+    // サンプリング数の検査
+    const byCh = groupByChapter(BANK); const quotas = computeBalancedQuotas(byCh, 30);
+    let picked=[]; Object.keys(byCh).forEach(k=>{ picked=picked.concat(sampleWithoutReplacement(byCh[k], Math.min(quotas[k]||0, byCh[k].length))); });
+    console.assert(picked.length<=30, '[SelfTest] picked length <= target');
+  }catch(err){ console.error('[SelfTest] failed', err); }
+}
+
+// 起動
+(function init(){
+  const saved = load(); if(saved){ state = {...state, ...saved}; }
+  renderStart(); setupKeys(); runSelfTests();
+})();
+</script>
+</body>
+</html>
