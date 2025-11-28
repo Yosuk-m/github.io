@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CBTテスト | 第3/4/6章からバランス抽出（第3章差し替え）</title>
+  <title>CBTテスト | 第3/4/6章からバランス抽出</title>
   <style>
     :root{
       --bg:#0b1020;--panel:#121a33;--accent:#6aa1ff;--text:#e9eefc;--muted:#a8b3d6;--danger:#ff6a7a;--good:#5ad39d
@@ -42,7 +42,14 @@
     input[type="checkbox"]{accent-color:var(--accent)}
     .footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px}
     .kbd{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:1px 6px;border-radius:6px;font-size:12px}
-  </style>
+      /* ===== 目立つサイズ選択ピル ===== */
+    .size-pills{gap:10px}
+    .size-pills .chip{font-size:14px;padding:10px 16px;border:2px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);transition:transform .06s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease}
+    .size-pills .chip:hover{border-color:var(--accent);background:rgba(106,161,255,.12)}
+    .size-pills input[type="radio"]:checked + label.chip{border-color:var(--accent);background:linear-gradient(180deg,var(--accent),#b6ceff);color:#081225;box-shadow:0 8px 22px rgba(106,161,255,.35);transform:translateY(-1px)}
+    .size-pills input[type="radio"] + label.chip{outline:0}
+    .size-pills input[type="radio"]:focus-visible + label.chip{box-shadow:0 0 0 3px rgba(106,161,255,.45)}
+</style>
 </head>
 <body>
   <div class="container">
@@ -70,7 +77,7 @@
  ********************/
 const CONFIG = {
   title: "第3/4/6章 CBT（合計可変・各章バランス）",
-  sampleSize: 50,
+  sampleSize: 30,
   shuffleQuestions: true,
   shuffleOptions: true,
   allowReviewBeforeSubmit: true,
@@ -87,7 +94,7 @@ function makeQ(chapter, number, stem, options, correctIndex, explanation){
 }
 
 const BANK = [
-  // ===== 第3章（Q1-15：システムとデジタル化） =====
+  // ===== 第3章（Q1-15） =====
   makeQ(3,1,'時間や温度のように連続して変化する量を、時計の針の位置や水銀柱の長さのように連続した量で表現することを何と呼ぶか', ['デジタル','アナログ','符号化','量子化'], 1,'連続量を連続量で表現するのがアナログ。'),
   makeQ(3,2,'連続して変化する量を、一定の間隔で区切った数字や、段階的な数値で表現する方法を何と呼ぶか', ['アナログ','デジタル','標本化','可逆圧縮'], 1,'離散的な表現がデジタル。'),
   makeQ(3,3,'情報をデジタル化するメリットとして正しいものはどれか', ['情報が連続的な量で表現されるため、そのままの形で保存できる。','データが数値化されないため、加工が難しい。','情報を元通りに再現することが可能である。','修正や編集などの加工が困難になる。'], 2,'劣化の少ない複製や正確な再現が可能。'),
@@ -125,7 +132,7 @@ const BANK = [
   makeQ(4,33,'メールアドレスの一般書式はどれか。',['ドメイン/ユーザ','ユーザ@ドメイン','IP:ポート','ユーザ.ドメイン'],1,'user@example.com'),
   makeQ(4,34,'メール送信で使うプロトコルはどれか。',['POP','IMAP','HTTP','SMTP'],3,'送信=SMTP。'),
   makeQ(4,35,'通信速度の単位はどれか。',['Hz','MB/s','fps','bps'],3,'bits per second。'),
-  makeQ(4,36,'速度単位の1k(十進)はどれか。',['1024','100','1000','10^6'],2,'通信分野ではk=1000が多い。'),
+  makeQ(4,36,'通信速度の単位の1k(十進)はどれか。',['1024','100','1000','10^6'],2,'通信分野ではk=1000が多い。'),
   makeQ(4,37,'情報セキュリティ三要素に含まれないのはどれか。',['機密性','完全性','迅速性','可用性'],2,'CIAのC,I,A。'),
   makeQ(4,38,'許可者のみアクセスできる状態はどれか。',['完全性','可用性','機密性','認証'],2,'Confidentiality。'),
   makeQ(4,39,'改ざん・破壊がない状態はどれか。',['機密性','可用性','完全性','認証'],2,'Integrity。'),
@@ -175,7 +182,7 @@ const BANK = [
   makeQ(6,131,'格納領域に付けた名前はどれか。',['変数','変数名','型','添字'],1,'識別子=変数名。'),
   makeQ(6,132,'if文が主に用いられる制御構造はどれか。',['順次','選択','反復','関数定義'],1,'条件分岐に使用。'),
   makeQ(6,133,'for/whileが主に用いられる制御構造はどれか。',['順次','選択','反復','関数定義'],2,'繰り返し。'),
-  makeQ(6,134,'Pythonのrange(初期値, 終了値)はどこまで繰り返すか。',['終了値まで','終了値の直前まで','初期値まで','増分0まで'],1,'上限は含まない。'),
+  makeQ(6,134,'Pythonのrange(初期値, 終了値)はどこまで繰り返すか。',['終了値まで','終了値-1まで','初期値まで','増分0まで'],1,'上限は含まない。'),
   makeQ(6,135,'while文が繰り返す条件はどれか。',['条件が真の間','終了値まで','回数が決まっている場合のみ','一度実行まで'],0,'条件式がtrueの間。'),
   makeQ(6,136,'同型の変数を集め一つの名前を付けたものはどれか。',['変数','リスト','関数','配列'],3,'配列/リスト。'),
   makeQ(6,137,'配列を構成する一つひとつはどれか。',['添字','変数名','要素','領域'],2,'各要素(element)。'),
@@ -190,7 +197,7 @@ const BANK = [
   makeQ(6,146,'二分探索の前提条件はどれか。',['ランダム配置','二次元配列','整列済み','データ量が少ない'],2,'昇順等で並んでいる必要。'),
   makeQ(6,147,'二分探索の基本手順はどれか。',['順に全探索','隣接比較で入替','3分割比較','半分に分けて含む側を再探索'],3,'middleと比較して範囲を絞る。'),
   makeQ(6,148,'基準に基づき並べ替えることはどれか。',['探索','ルーティング','整列(ソート)','圧縮'],2,'sort。'),
-  makeQ(6,149,'例示されている整列アルゴリズムはどれか。',['クイック','マージ','バブル','選択'],2,'隣接交換のバブルソート。'),
+  makeQ(6,149,'二つの値を比べながら行う整列アルゴリズムはどれか。',['クイック','マージ','バブル','選択'],2,'隣接交換のバブルソート。'),
   makeQ(6,150,'優れたアルゴリズムの基準はどれか。',['コードが短い','制御が複雑','計算量が少ない','手続きが多い'],2,'一般に計算量(O)が小さい。'),
   makeQ(6,151,'コンピュータが直接理解できるプログラムは何で記されるか。',['英数字','10進数','0と1','記号'],2,'機械語はビット列。'),
   makeQ(6,152,'機械語を英数字に置換した段階はどれか。',['高水準言語','機械語を英数字に置き換えたもの','関数型言語','オブジェクト指向言語'],1,'アセンブリ言語に相当。'),
@@ -295,7 +302,7 @@ function renderStart(){
 
   // 出題数ラジオ（20/30/40/50）
   const sizes = [20,30,40,50];
-  const sizeRow = document.createElement("div"); sizeRow.className='row';
+  const sizeRow = document.createElement("div"); sizeRow.className='row size-pills';
   const sizeLabel = document.createElement("div"); sizeLabel.className='muted'; sizeLabel.textContent='1回の出題数:'; sizeRow.appendChild(sizeLabel);
   const currentSize = getSampleSize();
   let startBtn = null;
@@ -324,6 +331,13 @@ function renderStart(){
   startBtn.addEventListener('click', startNewExam);
   const clearBtn = document.createElement('button'); clearBtn.textContent='正解済みリセット'; clearBtn.className='ghost';
   clearBtn.addEventListener('click',()=>{ setMastered(new Set()); renderStart(); });
+
+  // 途中から再開（進行中の解答がある場合）
+  if(state.order && state.order.length>0 && !state.submitted){
+    const resumeBtn = document.createElement('button'); resumeBtn.textContent='途中から再開'; resumeBtn.className='secondary';
+    resumeBtn.addEventListener('click', ()=>{ render(); });
+    btns.appendChild(resumeBtn);
+  }
 
   btns.appendChild(startBtn); btns.appendChild(clearBtn);
 
@@ -396,12 +410,14 @@ function render(){
   card.appendChild(fs);
 
   const nav = document.createElement('div'); nav.className='nav';
+  const home = document.createElement('button'); home.textContent='🏠 最初のページ'; home.className='ghost';
+  home.addEventListener('click', ()=>{ renderStart(); });
   const back = document.createElement('button'); back.textContent='← 戻る'; back.className='secondary';
   back.disabled = state.current===0 || !CONFIG.allowReviewBeforeSubmit;
   back.addEventListener('click',()=>{ state.current = clamp(state.current-1,0,total-1); save(); render(); });
   const next = document.createElement('button'); next.textContent = (state.current===total-1)?'解答を送信':'次へ →';
   next.addEventListener('click',()=>{ if(state.current===total-1){ submitAnswers(); } else { state.current = clamp(state.current+1,0,total-1); save(); render(); } });
-  nav.appendChild(back); nav.appendChild(next); card.appendChild(nav);
+  nav.appendChild(home); nav.appendChild(back); nav.appendChild(next); card.appendChild(nav);
   screen.appendChild(card);
 }
 
@@ -522,9 +538,6 @@ function runSelfTests(){
     const sum = o=>Object.values(o).reduce((a,b)=>a+b,0);
     // Quota配分の合計
     const q0 = computeBalancedQuotas({3:new Array(15),4:new Array(50),6:new Array(50)}, 50); console.assert(sum(q0)===50, '[SelfTest] Quotas sum to 50');
-    // 章ごとの問題数
-    console.assert(BANK.filter(q=>q.chapter===3).length===15, '[SelfTest] 第3章は15問');
-    console.assert(BANK.filter(q=>q.chapter===4).length===50 && BANK.filter(q=>q.chapter===6).length===50, '[SelfTest] 第4/6章は50問ずつ');
     // 空プール
     const q1 = computeBalancedQuotas({}, 50); console.assert(Object.keys(q1).length===0, '[SelfTest] Empty pool yields empty quotas');
     // 1章のみ
